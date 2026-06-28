@@ -20,7 +20,7 @@ function Terms() {
       </Link>
       <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">Legal</p>
       <h1 className="mt-2 font-serif text-4xl text-foreground">Terms of Service</h1>
-      <p className="mt-2 text-xs text-muted-foreground">Draft — last updated June 2026. Replace with your own legal review before submission.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Last updated June 2026.</p>
 
       <div className="prose prose-invert mt-6 space-y-4 text-sm text-muted-foreground">
         <h2 className="font-serif text-xl text-foreground">1. The product</h2>
