@@ -1,23 +1,23 @@
 import { useEffect, useState } from "react";
+import bmLogo from "@/assets/bm-logo.png.asset.json";
 
 /**
  * Brief mint-stamping splash on first load. Sessionstorage-gated so it
- * shows once per browser session, not every navigation.
+ * shows once per browser session, not every navigation. Mounted-gated to
+ * avoid SSR/client hydration mismatch.
  */
 export function Splash({ minDuration = 900 }: { minDuration?: number }) {
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return sessionStorage.getItem("csc.splash.seen") !== "1";
-  });
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!visible) return;
+    if (sessionStorage.getItem("csc.splash.seen") === "1") return;
+    setVisible(true);
     const t = setTimeout(() => {
       sessionStorage.setItem("csc.splash.seen", "1");
       setVisible(false);
     }, minDuration);
     return () => clearTimeout(t);
-  }, [visible, minDuration]);
+  }, [minDuration]);
 
   if (!visible) return null;
 
@@ -26,18 +26,18 @@ export function Splash({ minDuration = 900 }: { minDuration?: number }) {
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background"
       style={{ animation: "csc-splash-fade 200ms ease-out 700ms forwards" }}
     >
-      <div className="relative">
-        <div
-          className="medallion-gold size-36 rounded-full"
-          style={{ animation: "csc-splash-strike 600ms cubic-bezier(.2,.7,.2,1)" }}
-        >
-          <div
-            className="absolute inset-[10%] flex items-center justify-center rounded-full"
-            style={{ boxShadow: "inset 0 0 0 1px oklch(0 0 0 / 0.25), inset 0 0 0 2px oklch(1 0 0 / 0.18)" }}
-          >
-            <span className="font-serif text-5xl font-semibold" style={{ color: "oklch(0.22 0.02 60)" }}>BM</span>
-          </div>
-        </div>
+      <div
+        className="relative"
+        style={{ animation: "csc-splash-strike 600ms cubic-bezier(.2,.7,.2,1)" }}
+      >
+        <img
+          src={bmLogo.url}
+          alt="Blockchain Mint"
+          width={144}
+          height={144}
+          className="size-36 select-none"
+          draggable={false}
+        />
       </div>
       <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
         Cold Storage Coins
