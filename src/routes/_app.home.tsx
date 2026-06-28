@@ -7,6 +7,7 @@ import { CHAINS, cscId, fmtAmount, fmtUsd } from "@/lib/chains";
 import { ScanLine, Plus } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
 import { cacheCoinHistory, getCachedHistory } from "@/lib/localHistory";
+import logoAsset from "@/assets/bm-logo.png.asset.json";
 
 export const Route = createFileRoute("/_app/home")({
   head: () => ({
@@ -44,7 +45,10 @@ function HomePage() {
   return (
     <div className="px-5 pt-10">
       <header className="mb-8">
-        <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">Portfolio</p>
+        <div className="mb-2 flex items-center gap-2.5">
+          <img src={logoAsset.url} alt="Blockchain Mint" className="h-6 w-auto" />
+          <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">Portfolio</p>
+        </div>
         <div className="num mt-1 font-serif text-5xl text-foreground">{fmtUsd(totalFiat)}</div>
         <p className="mt-1 text-xs text-muted-foreground">
           across {coins.length} {coins.length === 1 ? "coin" : "coins"}
