@@ -55,6 +55,74 @@ export type Database = {
           },
         ]
       }
+      chain_price_state: {
+        Row: {
+          chain: string
+          last_checked_at: string
+          last_price: number | null
+        }
+        Insert: {
+          chain: string
+          last_checked_at?: string
+          last_price?: number | null
+        }
+        Update: {
+          chain?: string
+          last_checked_at?: string
+          last_price?: number | null
+        }
+        Relationships: []
+      }
+      device_alerts: {
+        Row: {
+          address: string
+          body: string
+          chain: string
+          created_at: string
+          device_id: string
+          id: string
+          kind: string
+          payload: Json | null
+          read_at: string | null
+          title: string
+          tx_hash: string | null
+        }
+        Insert: {
+          address: string
+          body: string
+          chain: string
+          created_at?: string
+          device_id: string
+          id?: string
+          kind: string
+          payload?: Json | null
+          read_at?: string | null
+          title: string
+          tx_hash?: string | null
+        }
+        Update: {
+          address?: string
+          body?: string
+          chain?: string
+          created_at?: string
+          device_id?: string
+          id?: string
+          kind?: string
+          payload?: Json | null
+          read_at?: string | null
+          title?: string
+          tx_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_alerts_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["device_id"]
+          },
+        ]
+      }
       device_tokens: {
         Row: {
           created_at: string
@@ -79,6 +147,98 @@ export type Database = {
           platform?: Database["public"]["Enums"]["device_platform"]
           token?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      device_watched: {
+        Row: {
+          address: string
+          balance_above: number | null
+          balance_below: number | null
+          chain: string
+          created_at: string
+          device_id: string
+          id: string
+          incoming_enabled: boolean
+          last_balance: number
+          last_checked_at: string | null
+          last_price_at_set: number | null
+          last_tx_hash: string | null
+          nickname: string | null
+          price_above: number | null
+          price_below: number | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          balance_above?: number | null
+          balance_below?: number | null
+          chain: string
+          created_at?: string
+          device_id: string
+          id?: string
+          incoming_enabled?: boolean
+          last_balance?: number
+          last_checked_at?: string | null
+          last_price_at_set?: number | null
+          last_tx_hash?: string | null
+          nickname?: string | null
+          price_above?: number | null
+          price_below?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          balance_above?: number | null
+          balance_below?: number | null
+          chain?: string
+          created_at?: string
+          device_id?: string
+          id?: string
+          incoming_enabled?: boolean
+          last_balance?: number
+          last_checked_at?: string | null
+          last_price_at_set?: number | null
+          last_tx_hash?: string | null
+          nickname?: string | null
+          price_above?: number | null
+          price_below?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_watched_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["device_id"]
+          },
+        ]
+      }
+      devices: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          device_id: string
+          last_seen_at: string
+          push_platform: string | null
+          push_token: string | null
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          device_id: string
+          last_seen_at?: string
+          push_platform?: string | null
+          push_token?: string | null
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          device_id?: string
+          last_seen_at?: string
+          push_platform?: string | null
+          push_token?: string | null
         }
         Relationships: []
       }
