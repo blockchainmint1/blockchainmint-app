@@ -54,6 +54,8 @@ export function detectChain(addr: string): { chain: ChainId; address: string } |
   // TXC: bech32 (txc1…) and legacy base58 (T…)
   if (/^txc1[a-z0-9]{20,87}$/i.test(a)) return { chain: "txc", address: a };
   if (/^T[a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(a)) return { chain: "txc", address: a };
+  // Cardano Shelley (addr1…) and testnet (addr_test1…)
+  if (/^addr1[a-z0-9]{50,}$/i.test(a) || /^addr_test1[a-z0-9]{50,}$/i.test(a)) return { chain: "ada", address: a };
   return null;
 }
 
