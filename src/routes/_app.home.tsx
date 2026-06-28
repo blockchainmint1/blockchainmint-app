@@ -9,6 +9,7 @@ import { ScanLine, Plus, RefreshCw } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
 import { cacheCoinHistory, getCachedHistory } from "@/lib/localHistory";
 import logoAsset from "@/assets/bm-logo.png.asset.json";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/_app/home")({
   head: () => ({
