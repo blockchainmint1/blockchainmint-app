@@ -21,7 +21,7 @@ function preload() {
  * Live camera QR reader. Requests camera permission lazily on user tap so
  * iOS Safari doesn't reject the call. Cleans up cleanly on unmount.
  */
-export function QrScanner({ onResult, paused }: Props) {
+export function QrScanner({ onResult, paused: _paused }: Props) {
   const containerId = "qr-reader-region";
   const scannerRef = useRef<Html5QrcodeType | null>(null);
   const gotResultRef = useRef(false);
