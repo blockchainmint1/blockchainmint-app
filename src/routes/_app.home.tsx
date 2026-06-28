@@ -5,11 +5,28 @@ import { useRef, useState } from "react";
 import { lookupAddress } from "@/lib/chains.functions";
 import { CoinLogo } from "@/components/CoinLogo";
 import { CHAINS, cscId, fmtAmount, fmtUsd } from "@/lib/chains";
-import { ScanLine, Plus, RefreshCw } from "lucide-react";
-import { useLocalPortfolio } from "@/lib/localPortfolio";
-import { cacheCoinHistory, getCachedHistory } from "@/lib/localHistory";
+import { ScanLine, Plus, RefreshCw, MoreVertical, Pencil, ArrowDownToLine, KeyRound, Trash2 } from "lucide-react";
+import { useLocalPortfolio, removeLocalCoin, renameLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
+import { cacheCoinHistory, clearCachedHistory, getCachedHistory } from "@/lib/localHistory";
 import logoAsset from "@/assets/bm-logo.png.asset.json";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/home")({
   head: () => ({
