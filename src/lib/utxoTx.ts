@@ -16,6 +16,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { ripemd160 } from "@noble/hashes/legacy.js";
 import { signAsync, getPublicKey } from "@noble/secp256k1";
 import { base58check, bech32 } from "@scure/base";
+import { decodeCashAddr, encodeCashAddr, looksLikeCashAddr } from "./cashaddr";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,8 +34,15 @@ export type ChainTxParams = {
   p2pkhVersion: number;
   /** bech32 HRP, or null if chain has no segwit */
   bech32Hrp: string | null;
-  /** sighash flag — 0x01 for BTC/LTC/DOGE/TXC */
+  /** cashaddr prefix (e.g. "bitcoincash"), or null if chain doesn't use cashaddr */
+  cashAddrPrefix?: string | null;
+  /** sighash flag — 0x01 for BTC/LTC/DOGE/TXC, 0x41 (with FORKID) for BCH */
   sighashAll: number;
+  /**
+   * If true, sign every input with BIP-143 preimage (BCH replay protection).
+   * Output serialization stays legacy (no witness section).
+   */
+  forkId?: boolean;
   /** minimum sat/vB fee rate the network/relay will accept */
   minFeeRate: number;
   /** dust threshold in base units */
@@ -70,6 +78,12 @@ export type BuildSweepResult = {
 
 export function decodeAddress(addr: string, params: ChainTxParams): AddrInfo {
   const a = addr.trim();
+  // CashAddr (BCH) — try first if chain supports it.
+  if (params.cashAddrPrefix && looksLikeCashAddr(a)) {
+    const dec = decodeCashAddr(a, params.cashAddrPrefix);
+    if (dec.type !== 0) throw new Error("Only P2PKH CashAddr destinations are supported.");
+    return { type: "p2pkh", pkh: dec.hash };
+  }
   if (params.bech32Hrp && a.toLowerCase().startsWith(params.bech32Hrp + "1")) {
     const dec = bech32.decode(a.toLowerCase() as `${string}1${string}`);
     const ver = dec.words[0];
@@ -96,6 +110,7 @@ function p2wpkhScript(pkh: Uint8Array): Uint8Array {
 function scriptForAddr(info: AddrInfo): Uint8Array {
   return info.type === "p2pkh" ? p2pkhScript(info.pkh) : p2wpkhScript(info.pkh);
 }
+
 
 // ---------------------------------------------------------------------------
 // Byte writers
