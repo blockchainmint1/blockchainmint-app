@@ -42,7 +42,7 @@ function Terms() {
         <p>To the maximum extent permitted by law, Blockchain Mint's liability is limited to the purchase price of the Coin in question. We disclaim all consequential damages.</p>
 
         <h2 className="font-serif text-xl text-foreground">7. Contact</h2>
-        <p>Questions: hello@honest.money.</p>
+        <p>Questions: mint@blockchainmint.com</p>
       </div>
       <Footer />
     </div>

@@ -44,7 +44,7 @@ function Privacy() {
         <p>You can delete your account at any time from Settings, which removes all stored watched addresses, alerts, and device tokens. Orders are retained for tax purposes.</p>
 
         <h2 className="font-serif text-xl text-foreground">Contact</h2>
-        <p>privacy@honest.money</p>
+        <p>mint@blockchainmint.com</p>
       </div>
       <Footer />
     </div>
