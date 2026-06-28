@@ -172,6 +172,13 @@ function SweepPage() {
             )}
           </div>
 
+          <ol className="mt-3 space-y-1.5 rounded-md border border-border bg-secondary/40 p-3 text-[11px] text-muted-foreground">
+            <li><span className="font-semibold text-foreground">1.</span> Gently peel off the tamper sticker with your fingernail. <span className="text-foreground/80">Don't use anything sharp</span> — it can scratch the engraved key.</li>
+            <li><span className="font-semibold text-foreground">2.</span> Tap <span className="font-semibold text-foreground">Scan</span> and point the camera at the QR under the sticker, or type the key in by hand.</li>
+            <li><span className="font-semibold text-foreground">3.</span> We'll verify the key matches this coin before anything is signed.</li>
+          </ol>
+
+
           <div className="mt-2 flex gap-2">
             <input
               type={showKey ? "text" : "password"}

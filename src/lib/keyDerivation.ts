@@ -78,7 +78,19 @@ export function sniffKeyFormat(input: string): KeyFormat {
   if (!s) return "unknown";
   if (/^6P[1-9A-HJ-NP-Za-km-z]{56}$/.test(s)) return "bip38";
   if (/^(0x)?[0-9a-fA-F]{64}$/.test(s)) return "hex";
-  if (/^[5KL9c][1-9A-HJ-NP-Za-km-z]{50,51}$/.test(s)) return "wif";
+  // WIF is base58 of 37 or 38 bytes → 50–52 chars. Different network version
+  // bytes produce different leading characters (BTC '5/K/L', LTC '6/T',
+  // TXC starts with letters outside the BTC set, etc.), so we don't gate on
+  // the first char — we attempt a base58check decode and accept anything
+  // whose version byte matches a known network.
+  if (/^[1-9A-HJ-NP-Za-km-z]{50,52}$/.test(s)) {
+    try {
+      const decoded = base58check(sha256).decode(s);
+      if ((decoded.length === 33 || decoded.length === 34) && ALL_WIF_PREFIXES.includes(decoded[0])) {
+        return "wif";
+      }
+    } catch { /* not base58check, fall through */ }
+  }
   return "unknown";
 }
 
