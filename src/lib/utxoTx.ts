@@ -176,17 +176,19 @@ export async function buildAndSignSweep(input: BuildSweepInput): Promise<BuildSw
   }
 
   const isSegwit = fromInfo.type === "p2wpkh";
+  const usesBip143 = isSegwit || !!params.forkId;
 
   // ---- Sign each input ---------------------------------------------------
   const signatures: Uint8Array[] = [];
   for (let i = 0; i < utxos.length; i++) {
-    const preimage = isSegwit
+    const preimage = usesBip143
       ? bip143Preimage(utxos, i, inputScript, outputScript, amountOut, params.sighashAll)
       : legacyPreimage(utxos, i, inputScript, outputScript, amountOut, params.sighashAll);
     const hash = dsha256(preimage);
     const der = await signAsync(hash, privKey, { format: "der", lowS: true });
     signatures.push(new Uint8Array([...der, params.sighashAll]));
   }
+
 
   // ---- Serialize final tx ------------------------------------------------
   const out: number[] = [];
