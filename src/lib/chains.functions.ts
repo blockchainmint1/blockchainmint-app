@@ -241,7 +241,54 @@ async function ethHistory(address: string): Promise<TxRecord[]> {
     }
     txs.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
     return txs.slice(0, 25);
-  } catch { return []; }
+async function ethTokens(address: string): Promise<Layer2Token[] | undefined> {
+  const url = alchemyEthUrl();
+  if (!url) return undefined;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "alchemy_getTokenBalances",
+        params: [address, "erc20"],
+      }),
+    });
+    const j = (await res.json()) as {
+      result?: { tokenBalances?: Array<{ contractAddress: string; tokenBalance: string }> };
+    };
+    const balances = j.result?.tokenBalances ?? [];
+    const out: Layer2Token[] = [];
+    for (const b of balances) {
+      const balanceHex = b.tokenBalance;
+      if (!balanceHex || balanceHex === "0x" || BigInt(balanceHex) === 0n) continue;
+      const metaRes = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "alchemy_getTokenMetadata",
+          params: [b.contractAddress],
+        }),
+      });
+      const meta = (await metaRes.json()) as {
+        result?: { name?: string; symbol?: string; decimals?: number; logo?: string };
+      };
+      const decimals = meta.result?.decimals ?? 18;
+      const balance = Number(BigInt(balanceHex) / BigInt(10 ** Math.max(0, decimals - 8))) / 1e8;
+      out.push({
+        id: b.contractAddress,
+        type: "erc20",
+        name: meta.result?.name ?? `ERC-20 ${b.contractAddress.slice(0, 6)}…`,
+        ticker: meta.result?.symbol,
+        balance,
+        divisible: true,
+      });
+    }
+    return out.length > 0 ? out : undefined;
+  } catch { return undefined; }
 }
 
 // ---------- Blockchair (LTC, DOGE, BCH) ------------------------------------
