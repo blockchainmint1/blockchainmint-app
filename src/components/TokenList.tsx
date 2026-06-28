@@ -23,7 +23,7 @@ function tokenColor(name: string) {
   return TOKEN_PALETTE[Math.abs(hash) % TOKEN_PALETTE.length];
 }
 
-export function TokenList({ tokens, chain }: { tokens: OmniToken[]; chain: string }) {
+export function TokenList({ tokens, chain }: { tokens: Layer2Token[]; chain: string }) {
   if (tokens.length === 0) return null;
 
   return (
