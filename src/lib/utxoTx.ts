@@ -330,7 +330,7 @@ function bip143Preimage(
 // Per-chain params table
 // ---------------------------------------------------------------------------
 
-export type SupportedSweepChain = "btc" | "ltc" | "doge" | "txc";
+export type SupportedSweepChain = "btc" | "ltc" | "doge" | "txc" | "bch";
 
 export const SWEEP_PARAMS: Record<SupportedSweepChain, ChainTxParams> = {
   btc:  { p2pkhVersion: 0x00, bech32Hrp: "bc",  sighashAll: 0x01, minFeeRate: 1,    dustThreshold: 546   },
@@ -339,4 +339,12 @@ export const SWEEP_PARAMS: Record<SupportedSweepChain, ChainTxParams> = {
   doge: { p2pkhVersion: 0x1e, bech32Hrp: null,  sighashAll: 0x01, minFeeRate: 1000, dustThreshold: 1_000_000 },
   // TEXITcoin — Bitcoin-derived (see chainparams.cpp): PUBKEY=66 (0x42), bech32 "txc".
   txc:  { p2pkhVersion: 0x42, bech32Hrp: "txc", sighashAll: 0x01, minFeeRate: 1,    dustThreshold: 546   },
+  // BCH: SIGHASH_ALL | SIGHASH_FORKID (0x40 | 0x01 = 0x41). BIP-143 preimage for
+  // every input. CashAddr "bitcoincash:" prefix; legacy 1… addresses also valid
+  // (version 0x00 — same as BTC, parsers must rely on the chain context).
+  bch:  { p2pkhVersion: 0x00, bech32Hrp: null,  cashAddrPrefix: "bitcoincash", sighashAll: 0x41, forkId: true, minFeeRate: 1, dustThreshold: 546 },
 };
+
+/** Re-export so callers can build cashaddr destinations from a pkh. */
+export { encodeCashAddr } from "./cashaddr";
+
