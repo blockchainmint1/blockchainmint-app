@@ -6,7 +6,7 @@ import { CoinLogo } from "@/components/CoinLogo";
 import { CHAINS, cscId, fmtAmount, fmtUsd, type ChainId } from "@/lib/chains";
 import { ScanLine, Plus } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
-
+import { cacheCoinHistory, getCachedHistory } from "@/lib/localHistory";
 
 export const Route = createFileRoute("/_app/home")({
   head: () => ({
@@ -24,11 +24,19 @@ function HomePage() {
   const lookup = useServerFn(lookupAddress);
 
   const summaries = useQueries({
-    queries: coins.map(c => ({
-      queryKey: ["summary", c.chain, c.address],
-      queryFn: () => lookup({ data: { chain: c.chain, address: c.address } }),
-      staleTime: 30_000,
-    })),
+    queries: coins.map(c => {
+      const cached = getCachedHistory(c.chain, c.address);
+      return {
+        queryKey: ["summary", c.chain, c.address],
+        queryFn: async () => {
+          const summary = await lookup({ data: { chain: c.chain, address: c.address } });
+          cacheCoinHistory(c.chain, c.address, { summary });
+          return summary;
+        },
+        initialData: cached?.summary,
+        staleTime: 30_000,
+      };
+    }),
   });
 
   const totalFiat = summaries.reduce((s, q) => s + (q.data?.balanceFiat ?? 0), 0);
