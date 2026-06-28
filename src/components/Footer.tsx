@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 /**
- * Workspace standard footer: part of the honest.money ecosystem +
+ * Workspace standard footer:
  * Terms / Privacy / Manifesto links.
  */
 export function Footer() {
