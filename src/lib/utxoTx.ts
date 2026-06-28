@@ -14,7 +14,7 @@
 
 import { sha256 } from "@noble/hashes/sha2.js";
 import { ripemd160 } from "@noble/hashes/legacy.js";
-import { signAsync, getPublicKey } from "@noble/secp256k1";
+import { secp256k1 } from "@noble/curves/secp256k1";
 import { base58check, bech32 } from "@scure/base";
 import { decodeCashAddr, encodeCashAddr, looksLikeCashAddr } from "./cashaddr";
 
@@ -155,7 +155,7 @@ export async function buildAndSignSweep(input: BuildSweepInput): Promise<BuildSw
 
   const fromInfo = decodeAddress(fromAddress, params);
   const toInfo   = decodeAddress(toAddress,   params);
-  const pubkey   = getPublicKey(privKey, compressedPubkey);
+  const pubkey   = secp256k1.getPublicKey(privKey, compressedPubkey);
 
   const inputScript  = scriptForAddr(fromInfo);
   const outputScript = scriptForAddr(toInfo);
@@ -185,7 +185,8 @@ export async function buildAndSignSweep(input: BuildSweepInput): Promise<BuildSw
       ? bip143Preimage(utxos, i, inputScript, outputScript, amountOut, params.sighashAll)
       : legacyPreimage(utxos, i, inputScript, outputScript, amountOut, params.sighashAll);
     const hash = dsha256(preimage);
-    const der = await signAsync(hash, privKey, { format: "der", lowS: true });
+    const sig = secp256k1.sign(hash, privKey, { lowS: true });
+    const der = sig.toDERRawBytes();
     signatures.push(new Uint8Array([...der, params.sighashAll]));
   }
 
