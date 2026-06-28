@@ -189,9 +189,15 @@ function derivePublicAddresses(
         // P2WPKH only from compressed pubkey; uncompressed not allowed in segwit.
         if (pub === pubCompressed) addrs.push(bech32P2wpkh(params.bech32Hrp, pkh));
       }
+      // BCH: also surface the modern CashAddr form so verification matches
+      // whichever encoding the coin / user has.
+      if (chain === "bch") {
+        addrs.push(encodeCashAddr("bitcoincash", 0, pkh));
+      }
     }
     addressesByChain[chain] = Array.from(new Set(addrs));
   }
+
 
   // Which chains is this key a plausible sweep candidate for? Everything we
   // derived for, ordered with hex-friendly chains first.
