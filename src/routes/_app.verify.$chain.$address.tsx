@@ -62,9 +62,9 @@ function VerifyPage() {
         ) : (
           <div className="rounded-xl border border-accent/40 bg-accent/5 p-5 text-center">
             <ShieldAlert className="mx-auto size-8 text-accent" />
-            <p className="mt-2 font-serif text-xl text-foreground">Not in our registry</p>
+            <p className="mt-2 font-serif text-xl text-foreground">Registry lookup not available yet — coming soon!</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              We don't have a mint record for this address. It may be an older coin, or it may not be from Blockchain&nbsp;Mint. You can still watch it.
+              We're still connecting the Blockchain Mint registry. You can still watch this coin and check its balance.
             </p>
           </div>
         )}
