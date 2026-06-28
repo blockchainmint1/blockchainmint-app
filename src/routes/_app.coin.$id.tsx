@@ -83,7 +83,7 @@ function CoinPage() {
 
       <div className="mt-6 flex flex-col items-center text-center">
         <CoinMedallion chain={coin.chain} size={140} />
-        <h1 className="mt-5 font-serif text-2xl text-foreground">{coin.label || `${ch.name} coin`}</h1>
+        <CoinTitle coin={coin} defaultLabel={`${ch.name} coin`} onRename={(l) => setCoin({ ...coin, label: l || undefined })} />
         <p className="num mt-3 font-serif text-4xl text-foreground">
           {summary ? fmtAmount(summary.balance, ch.decimals, 6) : "—"} <span className="text-base text-muted-foreground">{ch.ticker}</span>
         </p>
