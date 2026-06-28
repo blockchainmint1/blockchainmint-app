@@ -24,7 +24,9 @@ export const Route = createFileRoute("/_app/sweep")({
 const SUPPORTED_SWEEP: ChainId[] = ["btc", "eth", "ltc", "doge", "bch", "txc"];
 
 function SweepPage() {
-  const { chain, address } = useSearch({ from: "/_app/sweep" });
+  const search = useSearch({ from: "/_app/sweep" });
+  const chain = search.chain as ChainId | undefined;
+  const address = search.address as string | undefined;
   const navigate = useNavigate();
 
   // ---- key input + verification state ---------------------------------
