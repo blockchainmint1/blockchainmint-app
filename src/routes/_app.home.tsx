@@ -5,11 +5,28 @@ import { useRef, useState } from "react";
 import { lookupAddress } from "@/lib/chains.functions";
 import { CoinLogo } from "@/components/CoinLogo";
 import { CHAINS, cscId, fmtAmount, fmtUsd } from "@/lib/chains";
-import { ScanLine, Plus, RefreshCw } from "lucide-react";
-import { useLocalPortfolio } from "@/lib/localPortfolio";
-import { cacheCoinHistory, getCachedHistory } from "@/lib/localHistory";
+import { ScanLine, Plus, RefreshCw, MoreVertical, Pencil, ArrowDownToLine, KeyRound, Trash2 } from "lucide-react";
+import { useLocalPortfolio, removeLocalCoin, renameLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
+import { cacheCoinHistory, clearCachedHistory, getCachedHistory } from "@/lib/localHistory";
 import logoAsset from "@/assets/bm-logo.png.asset.json";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/home")({
   head: () => ({
@@ -133,34 +150,125 @@ function HomePage() {
           const s = summaries[idx]?.data;
           return (
             <li key={coin.id}>
-              <Link
-                to="/coin/$id"
-                params={{ id: coin.id }}
-                className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition hover:border-primary/40"
-              >
-                <CoinLogo chain={coin.chain} size={44} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-serif text-base text-foreground">
-                    <span className="font-mono text-sm tracking-wider text-foreground">{ch.ticker}</span>
-                    <span className="ml-2 font-mono text-xs text-muted-foreground">#{cscId(coin.chain, coin.address)}</span>
-                  </p>
-                  {coin.label && (
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{coin.label}</p>
-                  )}
-                </div>
+              <div className="group flex items-center gap-2 rounded-xl border border-border bg-card pr-2 transition hover:border-primary/40">
+                <Link
+                  to="/coin/$id"
+                  params={{ id: coin.id }}
+                  className="flex min-w-0 flex-1 items-center gap-4 p-4"
+                >
+                  <CoinLogo chain={coin.chain} size={44} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-serif text-base text-foreground">
+                      <span className="font-mono text-sm tracking-wider text-foreground">{ch.ticker}</span>
+                      <span className="ml-2 font-mono text-xs text-muted-foreground">#{cscId(coin.chain, coin.address)}</span>
+                    </p>
+                    {coin.label && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{coin.label}</p>
+                    )}
+                  </div>
 
-                <div className="text-right">
-                  <p className="num font-serif text-base text-foreground">
-                    {s ? fmtAmount(s.balance, ch.decimals, 6) : "—"}
-                  </p>
-                  <p className="num text-xs text-muted-foreground">{fmtUsd(s?.balanceFiat ?? 0)}</p>
-                </div>
-              </Link>
+                  <div className="text-right">
+                    <p className="num font-serif text-base text-foreground">
+                      {s ? fmtAmount(s.balance, ch.decimals, 6) : "—"}
+                    </p>
+                    <p className="num text-xs text-muted-foreground">{fmtUsd(s?.balanceFiat ?? 0)}</p>
+                  </div>
+                </Link>
+                <CoinRowMenu coin={coin} />
+              </div>
             </li>
           );
         })}
       </ul>
     </div>
+  );
+}
+
+function CoinRowMenu({ coin }: { coin: LocalCoin }) {
+  const navigate = useNavigate();
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [label, setLabel] = useState(coin.label ?? "");
+
+  function saveRename() {
+    renameLocalCoin(coin.id, label);
+    setRenameOpen(false);
+    toast.success("Nickname saved.");
+  }
+
+  function confirmDelete() {
+    clearCachedHistory(coin.chain, coin.address);
+    removeLocalCoin(coin.id);
+    setDeleteOpen(false);
+    toast.success("Coin removed.");
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label="Coin actions"
+          className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreVertical className="size-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem onSelect={() => { setLabel(coin.label ?? ""); setRenameOpen(true); }}>
+            <Pencil className="size-4" /> Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => navigate({ to: "/coin/$id", params: { id: coin.id } })}>
+            <ArrowDownToLine className="size-4" /> Add value
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => navigate({ to: "/sweep", search: { chain: coin.chain, address: coin.address } })}>
+            <KeyRound className="size-4" /> Redeem value
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => setDeleteOpen(true)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="size-4" /> Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename coin</DialogTitle>
+            <DialogDescription>Give this coin a nickname. Leave blank to clear.</DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={label}
+            maxLength={40}
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") saveRename(); }}
+            placeholder={`${CHAINS[coin.chain].name} coin`}
+          />
+          <DialogFooter>
+            <button onClick={() => setRenameOpen(false)} className="rounded-md border border-border bg-secondary px-3 py-1.5 text-sm hover:bg-secondary/80">Cancel</button>
+            <button onClick={saveRename} className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">Save</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove this coin?</DialogTitle>
+            <DialogDescription>
+              The physical coin and its funds are unaffected — this only removes the watch entry from this device.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button onClick={() => setDeleteOpen(false)} className="rounded-md border border-border bg-secondary px-3 py-1.5 text-sm hover:bg-secondary/80">Cancel</button>
+            <button onClick={confirmDelete} className="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground hover:bg-destructive/90">Remove</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
