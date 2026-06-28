@@ -2,10 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueries } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { lookupAddress } from "@/lib/chains.functions";
-import { CoinMedallion } from "@/components/CoinMedallion";
-import { CHAINS, fmtAmount, fmtUsd, shortAddr, type ChainId } from "@/lib/chains";
+import { CoinLogo } from "@/components/CoinLogo";
+import { CHAINS, cscId, fmtAmount, fmtUsd, type ChainId } from "@/lib/chains";
 import { ScanLine, Plus } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
+
 
 export const Route = createFileRoute("/_app/home")({
   head: () => ({
@@ -65,16 +66,17 @@ function HomePage() {
                 params={{ id: coin.id }}
                 className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition hover:border-primary/40"
               >
-                <CoinMedallion chain={coin.chain} size={56} />
+                <CoinLogo chain={coin.chain} size={44} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate font-serif text-base text-foreground">
-                      {coin.label || `${ch.name} coin`}
-                    </p>
-                    <span className="rounded-sm bg-secondary px-1.5 py-px font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{ch.ticker}</span>
-                  </div>
-                  <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{shortAddr(coin.address)}</p>
+                  <p className="truncate font-serif text-base text-foreground">
+                    <span className="font-mono text-sm tracking-wider text-foreground">{ch.ticker}</span>
+                    <span className="ml-2 font-mono text-xs text-muted-foreground">#{cscId(coin.chain, coin.address)}</span>
+                  </p>
+                  {coin.label && (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{coin.label}</p>
+                  )}
                 </div>
+
                 <div className="text-right">
                   <p className="num font-serif text-base text-foreground">
                     {s ? fmtAmount(s.balance, ch.decimals, 6) : "—"}

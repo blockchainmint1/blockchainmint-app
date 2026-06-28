@@ -84,3 +84,17 @@ export function metalForChain(c: ChainId): Metal {
     case "iskander": return "copper";
   }
 }
+
+/**
+ * Cold Storage Coin ID — the 6-character identifier physically engraved on the
+ * coin. Derived from the public address:
+ *   - ETH: characters 3–8 (skip the "0x" prefix)
+ *   - everything else: characters 2–7 (skip the first character of the address)
+ * Returned uppercase for display.
+ */
+export function cscId(chain: ChainId, address: string): string {
+  if (!address) return "";
+  const start = chain === "eth" ? 2 : 1;
+  return address.slice(start, start + 6).toUpperCase();
+}
+
