@@ -1,13 +1,13 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
-import { getTxHistory, lookupAddress, removeWatched } from "@/lib/chains.functions";
+import { getTxHistory, lookupAddress } from "@/lib/chains.functions";
 import { CoinMedallion } from "@/components/CoinMedallion";
-import { CHAINS, fmtAmount, fmtUsd, type ChainId } from "@/lib/chains";
+import { CHAINS, fmtAmount, fmtUsd } from "@/lib/chains";
 import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getLocalCoin, removeLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
 
 export const Route = createFileRoute("/_app/coin/$id")({
   head: () => ({ meta: [{ title: "Coin — Blockchain Mint" }] }),
@@ -17,47 +17,45 @@ export const Route = createFileRoute("/_app/coin/$id")({
 function CoinPage() {
   const { id } = useParams({ from: "/_app/coin/$id" });
   const navigate = useNavigate();
-  const qc = useQueryClient();
+  const [coin, setCoin] = useState<LocalCoin | undefined>(undefined);
+  const [loaded, setLoaded] = useState(false);
 
-  const { data: coin, isLoading } = useQuery({
-    queryKey: ["coin", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("watched_addresses")
-        .select("id,chain,address,label,denomination,metal,serial,mint_year")
-        .eq("id", id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
+  useEffect(() => {
+    setCoin(getLocalCoin(id));
+    setLoaded(true);
+  }, [id]);
 
   const summaryFn = useServerFn(lookupAddress);
   const txFn = useServerFn(getTxHistory);
-  const removeFn = useServerFn(removeWatched);
 
   const { data: summary } = useQuery({
     queryKey: ["coin-summary", coin?.chain, coin?.address],
-    queryFn: () => summaryFn({ data: { chain: coin!.chain as ChainId, address: coin!.address } }),
+    queryFn: () => summaryFn({ data: { chain: coin!.chain, address: coin!.address } }),
     enabled: !!coin,
   });
   const { data: txs } = useQuery({
     queryKey: ["coin-txs", coin?.chain, coin?.address],
-    queryFn: () => txFn({ data: { chain: coin!.chain as ChainId, address: coin!.address } }),
+    queryFn: () => txFn({ data: { chain: coin!.chain, address: coin!.address } }),
     enabled: !!coin,
   });
 
-  const remove = useMutation({
-    mutationFn: () => removeFn({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Coin removed from your portfolio.");
-      qc.invalidateQueries({ queryKey: ["portfolio"] });
-      navigate({ to: "/home" });
-    },
-  });
+  if (!loaded) return <div className="px-5 pt-10 text-sm text-muted-foreground">Loading…</div>;
+  if (!coin) {
+    return (
+      <div className="px-5 pt-10 text-center">
+        <p className="text-sm text-muted-foreground">Coin not found in this device's portfolio.</p>
+        <Link to="/home" className="mt-4 inline-block text-sm text-primary hover:underline">Back to portfolio</Link>
+      </div>
+    );
+  }
+  const ch = CHAINS[coin.chain];
 
-  if (isLoading || !coin) return <div className="px-5 pt-10">Loading…</div>;
-  const ch = CHAINS[coin.chain as ChainId];
+  function handleRemove() {
+    if (!confirm("Remove this coin from your portfolio? The coin itself is unaffected — only its watch entry is deleted.")) return;
+    removeLocalCoin(id);
+    toast.success("Coin removed.");
+    navigate({ to: "/home" });
+  }
 
   return (
     <div className="px-5 pt-6">
@@ -66,7 +64,7 @@ function CoinPage() {
       </Link>
 
       <div className="mt-6 flex flex-col items-center text-center">
-        <CoinMedallion chain={coin.chain as ChainId} size={140} />
+        <CoinMedallion chain={coin.chain} size={140} />
         <h1 className="mt-5 font-serif text-2xl text-foreground">{coin.label || `${ch.name} coin`}</h1>
         <p className="num mt-3 font-serif text-4xl text-foreground">
           {summary ? fmtAmount(summary.balance, ch.decimals, 6) : "—"} <span className="text-base text-muted-foreground">{ch.ticker}</span>
@@ -81,13 +79,13 @@ function CoinPage() {
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <Link
-          to="/verify/$chain/$address" params={{ chain: coin.chain as ChainId, address: coin.address }}
+          to="/verify/$chain/$address" params={{ chain: coin.chain, address: coin.address }}
           className="flex items-center justify-center gap-2 rounded-md border border-border bg-secondary px-4 py-2.5 text-sm font-medium hover:bg-secondary/80"
         >
           <ShieldCheck className="size-4" /> Verify
         </Link>
         <Link
-          to="/sweep" search={{ chain: coin.chain as ChainId, address: coin.address }}
+          to="/sweep" search={{ chain: coin.chain, address: coin.address }}
           className="flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent/90"
         >
           <KeyRound className="size-4" /> Sweep
@@ -122,11 +120,7 @@ function CoinPage() {
       )}
 
       <button
-        onClick={() => {
-          if (confirm("Remove this coin from your portfolio? The coin itself is unaffected — only its watch entry is deleted.")) {
-            remove.mutate();
-          }
-        }}
+        onClick={handleRemove}
         className="mt-8 flex w-full items-center justify-center gap-2 rounded-md border border-destructive/40 px-4 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10"
       >
         <Trash2 className="size-4" /> Remove coin
