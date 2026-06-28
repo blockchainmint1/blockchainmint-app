@@ -5,10 +5,10 @@ import { getTxHistory, lookupAddress } from "@/lib/chains.functions";
 import { TokenList } from "@/components/TokenList";
 import { CoinMedallion } from "@/components/CoinMedallion";
 import { CHAINS, fmtAmount, fmtUsd } from "@/lib/chains";
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-import { getLocalCoin, removeLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
+import { getLocalCoin, removeLocalCoin, renameLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
 import { cacheCoinHistory, clearCachedHistory, getCachedHistory } from "@/lib/localHistory";
 
 export const Route = createFileRoute("/_app/coin/$id")({
