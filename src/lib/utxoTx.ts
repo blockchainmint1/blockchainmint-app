@@ -155,7 +155,7 @@ export async function buildAndSignSweep(input: BuildSweepInput): Promise<BuildSw
 
   const fromInfo = decodeAddress(fromAddress, params);
   const toInfo   = decodeAddress(toAddress,   params);
-  const pubkey   = getPublicKey(privKey, compressedPubkey);
+  const pubkey   = secp256k1.getPublicKey(privKey, compressedPubkey);
 
   const inputScript  = scriptForAddr(fromInfo);
   const outputScript = scriptForAddr(toInfo);
