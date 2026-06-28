@@ -5,11 +5,13 @@ import { getTxHistory, lookupAddress } from "@/lib/chains.functions";
 import { TokenList } from "@/components/TokenList";
 import { CoinLogo } from "@/components/CoinLogo";
 import { CHAINS, fmtAmount, fmtUsd } from "@/lib/chains";
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2, Pencil, Check, X, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { getLocalCoin, removeLocalCoin, renameLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
 import { cacheCoinHistory, clearCachedHistory, getCachedHistory } from "@/lib/localHistory";
+import QRCode from "qrcode";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_app/coin/$id")({
   head: () => ({ meta: [{ title: "Coin — Blockchain Mint" }] }),
