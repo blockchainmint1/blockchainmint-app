@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getTxHistory, lookupAddress } from "@/lib/chains.functions";
 import { TokenList } from "@/components/TokenList";
-import { CoinMedallion } from "@/components/CoinMedallion";
+import { CoinLogo } from "@/components/CoinLogo";
 import { CHAINS, fmtAmount, fmtUsd } from "@/lib/chains";
 import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
@@ -82,7 +82,7 @@ function CoinPage() {
       </Link>
 
       <div className="mt-6 flex flex-col items-center text-center">
-        <CoinMedallion chain={coin.chain} size={140} />
+        <CoinLogo chain={coin.chain} size={140} />
         <CoinTitle coin={coin} defaultLabel={`${ch.name} coin`} onRename={(l) => setCoin({ ...coin, label: l || undefined })} />
         <p className="num mt-3 font-serif text-4xl text-foreground">
           {summary ? fmtAmount(summary.balance, ch.decimals, 6) : "—"} <span className="text-base text-muted-foreground">{ch.ticker}</span>
