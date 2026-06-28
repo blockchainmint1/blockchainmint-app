@@ -344,6 +344,109 @@ async function blockchairHistory(chain: ChainId, address: string): Promise<TxRec
   } catch { return []; }
 }
 
+// ---------- Cardano via Koios (no API key required) ------------------------
+
+async function adaSummary(address: string): Promise<AddressSummary> {
+  try {
+    const res = await fetch("https://api.koios.rest/api/v1/address_info", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ _addresses: [address] }),
+    });
+    if (!res.ok) throw new Error(`ada ${res.status}`);
+    const j = (await res.json()) as Array<{ balance?: string; utxo_set?: unknown[] }>;
+    const row = j[0];
+    const lovelace = row?.balance ? BigInt(row.balance) : 0n;
+    const balance = Number(lovelace) / 1e6;
+    const price = await getPrice("ada");
+    return {
+      chain: "ada", address, balance,
+      balanceFiat: price != null ? balance * price : null,
+      txCount: row?.utxo_set?.length ?? 0,
+      supported: true,
+    };
+  } catch (e) {
+    return { chain: "ada", address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: (e as Error).message };
+  }
+}
+
+async function adaHistory(address: string): Promise<TxRecord[]> {
+  try {
+    const res = await fetch("https://api.koios.rest/api/v1/address_txs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ _addresses: [address] }),
+    });
+    if (!res.ok) return [];
+    const j = (await res.json()) as Array<{ tx_hash: string; block_time?: number }>;
+    return j.slice(0, 25).map(t => ({
+      hash: t.tx_hash,
+      direction: "in" as const,
+      amount: 0,
+      fee: null,
+      timestamp: t.block_time ?? null,
+      confirmed: true,
+      url: `https://cardanoscan.io/transaction/${t.tx_hash}`,
+    }));
+  } catch { return []; }
+}
+
+// ---------- Solana via public mainnet RPC ----------------------------------
+
+const SOL_RPC = "https://api.mainnet-beta.solana.com";
+
+async function solRpc<T>(method: string, params: unknown[]): Promise<T | null> {
+  try {
+    const res = await fetch(SOL_RPC, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { result?: T; error?: unknown };
+    return (j.result ?? null) as T | null;
+  } catch { return null; }
+}
+
+async function solSummary(address: string): Promise<AddressSummary> {
+  try {
+    const bal = await solRpc<{ value: number }>("getBalance", [address]);
+    const balance = (bal?.value ?? 0) / 1e9;
+    const sigs = await solRpc<Array<{ signature: string }>>(
+      "getSignaturesForAddress",
+      [address, { limit: 1 }],
+    );
+    const price = await getPrice("sol");
+    return {
+      chain: "sol", address, balance,
+      balanceFiat: price != null ? balance * price : null,
+      txCount: sigs?.length ? 1 : 0, // RPC doesn't expose total; placeholder
+      supported: true,
+    };
+  } catch (e) {
+    return { chain: "sol", address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: (e as Error).message };
+  }
+}
+
+async function solHistory(address: string): Promise<TxRecord[]> {
+  try {
+    const sigs = await solRpc<Array<{ signature: string; blockTime?: number | null; err?: unknown }>>(
+      "getSignaturesForAddress",
+      [address, { limit: 25 }],
+    );
+    if (!sigs) return [];
+    return sigs.map(s => ({
+      hash: s.signature,
+      direction: "in" as const,
+      amount: 0,
+      fee: null,
+      timestamp: s.blockTime ?? null,
+      confirmed: !s.err,
+      url: `https://solscan.io/tx/${s.signature}`,
+    }));
+  } catch { return []; }
+}
+
 // ---------- Dispatch --------------------------------------------------------
 
 async function summarize(chain: ChainId, address: string): Promise<AddressSummary> {
@@ -355,6 +458,8 @@ async function summarize(chain: ChainId, address: string): Promise<AddressSummar
   }
   if (chain === "eth") return ethSummary(address);
   if (chain === "ltc" || chain === "doge" || chain === "bch") return blockchairSummary(chain, address);
+  if (chain === "ada") return adaSummary(address);
+  if (chain === "sol") return solSummary(address);
   return {
     chain, address, balance: 0, balanceFiat: null, txCount: 0,
     supported: false,
@@ -367,6 +472,8 @@ async function history(chain: ChainId, address: string): Promise<TxRecord[]> {
   if (chain === "txc") return esploraHistory(ESPLORA.txc, address);
   if (chain === "eth") return ethHistory(address);
   if (chain === "ltc" || chain === "doge" || chain === "bch") return blockchairHistory(chain, address);
+  if (chain === "ada") return adaHistory(address);
+  if (chain === "sol") return solHistory(address);
   return [];
 }
 
