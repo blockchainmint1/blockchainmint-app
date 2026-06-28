@@ -578,8 +578,9 @@ export const broadcastSweep = createServerFn({ method: "POST" })
         if (!res.ok) return { ok: false, error: text || `Broadcast failed (${res.status})` };
         return { ok: true, txid: text.trim() };
       }
-      // DOGE via Blockchair.
-      const res = await fetch("https://api.blockchair.com/dogecoin/push/transaction", {
+      // DOGE / BCH via Blockchair push endpoint.
+      const slug = chain === "doge" ? "dogecoin" : "bitcoin-cash";
+      const res = await fetch(`https://api.blockchair.com/${slug}/push/transaction`, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ data: rawHex }).toString(),
@@ -589,6 +590,7 @@ export const broadcastSweep = createServerFn({ method: "POST" })
       const txid = j.data?.transaction_hash;
       if (!txid) return { ok: false, error: "Broadcast accepted but no txid returned." };
       return { ok: true, txid };
+
     } catch (e) {
       return { ok: false, error: (e as Error).message };
     }
