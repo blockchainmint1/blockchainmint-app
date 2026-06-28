@@ -44,13 +44,11 @@ export function QrScanner({ onResult, paused }: Props) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!active || !scannerRef.current) return;
-    try {
-      if (paused) scannerRef.current.pause(true);
-      else scannerRef.current.resume();
-    } catch { /* library throws if not in scanning state — ignore */ }
-  }, [paused, active]);
+  // We pause synchronously inside the scan callback once we get a hit, so no
+  // separate effect is needed to react to `paused`. Calling resume()/pause()
+  // outside of the right scanner state throws from inside html5-qrcode and
+  // those throws can escape React's error boundary in some builds.
+
 
   async function start() {
     setError(null);
