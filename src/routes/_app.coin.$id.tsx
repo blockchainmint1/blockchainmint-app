@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getTxHistory, lookupAddress } from "@/lib/chains.functions";
 import { TokenList } from "@/components/TokenList";
-import { CoinMedallion } from "@/components/CoinMedallion";
+import { CoinLogo } from "@/components/CoinLogo";
 import { CHAINS, fmtAmount, fmtUsd } from "@/lib/chains";
 import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
