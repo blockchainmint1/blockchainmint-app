@@ -7,6 +7,7 @@ import { CHAINS, cscId, fmtAmount, fmtUsd } from "@/lib/chains";
 import { ScanLine, Plus } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
 import { cacheCoinHistory, getCachedHistory } from "@/lib/localHistory";
+import logoAsset from "@/assets/bm-logo.png.asset.json";
 
 export const Route = createFileRoute("/_app/home")({
   head: () => ({
