@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { getLocalCoin, removeLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
+import { cacheCoinHistory, clearCachedHistory, getCachedHistory } from "@/lib/localHistory";
 
 export const Route = createFileRoute("/_app/coin/$id")({
   head: () => ({ meta: [{ title: "Coin — Blockchain Mint" }] }),
@@ -28,16 +29,31 @@ function CoinPage() {
   const summaryFn = useServerFn(lookupAddress);
   const txFn = useServerFn(getTxHistory);
 
+  const cached = coin ? getCachedHistory(coin.chain, coin.address) : undefined;
+
   const { data: summary } = useQuery({
     queryKey: ["coin-summary", coin?.chain, coin?.address],
     queryFn: () => summaryFn({ data: { chain: coin!.chain, address: coin!.address } }),
     enabled: !!coin,
+    initialData: cached?.summary,
   });
+
   const { data: txs } = useQuery({
     queryKey: ["coin-txs", coin?.chain, coin?.address],
     queryFn: () => txFn({ data: { chain: coin!.chain, address: coin!.address } }),
     enabled: !!coin,
+    initialData: cached?.txs,
   });
+
+  useEffect(() => {
+    if (!coin || !summary) return;
+    cacheCoinHistory(coin.chain, coin.address, { summary });
+  }, [coin, summary]);
+
+  useEffect(() => {
+    if (!coin || !txs) return;
+    cacheCoinHistory(coin.chain, coin.address, { txs });
+  }, [coin, txs]);
 
   if (!loaded) return <div className="px-5 pt-10 text-sm text-muted-foreground">Loading…</div>;
   if (!coin) {
@@ -52,6 +68,7 @@ function CoinPage() {
 
   function handleRemove() {
     if (!confirm("Remove this coin from your portfolio? The coin itself is unaffected — only its watch entry is deleted.")) return;
+    if (coin) clearCachedHistory(coin.chain, coin.address);
     removeLocalCoin(id);
     toast.success("Coin removed.");
     navigate({ to: "/home" });
