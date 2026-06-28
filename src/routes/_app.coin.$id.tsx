@@ -151,6 +151,47 @@ function CoinPage() {
   );
 }
 
+function CoinTitle({ coin, defaultLabel, onRename }: { coin: LocalCoin; defaultLabel: string; onRename: (label: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(coin.label ?? "");
+
+  function save() {
+    renameLocalCoin(coin.id, value);
+    onRename(value.trim());
+    setEditing(false);
+    toast.success("Nickname saved.");
+  }
+
+  if (editing) {
+    return (
+      <div className="mt-5 flex w-full max-w-xs items-center gap-1.5">
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+          placeholder={defaultLabel}
+          maxLength={40}
+          className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-center font-serif text-lg text-foreground outline-none focus:border-primary"
+        />
+        <button onClick={save} className="rounded-md border border-border bg-secondary p-2 hover:bg-secondary/80" aria-label="Save">
+          <Check className="size-4" />
+        </button>
+        <button onClick={() => { setValue(coin.label ?? ""); setEditing(false); }} className="rounded-md border border-border bg-secondary p-2 hover:bg-secondary/80" aria-label="Cancel">
+          <X className="size-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => setEditing(true)} className="group mt-5 inline-flex items-center gap-2 text-foreground">
+      <h1 className="font-serif text-2xl">{coin.label || defaultLabel}</h1>
+      <Pencil className="size-3.5 text-muted-foreground opacity-60 group-hover:opacity-100" />
+    </button>
+  );
+}
+
 function ReceiveBlock({ address, explorerUrl }: { address: string; explorerUrl: string }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
