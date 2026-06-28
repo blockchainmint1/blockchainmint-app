@@ -1,24 +1,13 @@
 import { Link } from "@tanstack/react-router";
 
 /**
- * Workspace standard footer: part of the honest.money ecosystem +
+ * Workspace standard footer:
  * Terms / Privacy / Manifesto links.
  */
 export function Footer() {
   return (
     <footer className="border-t border-border/60 bg-background/60 px-5 py-6 text-center text-xs text-muted-foreground">
-      <p>
-        Part of the{" "}
-        <a
-          href="https://honest.money"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline-offset-4 hover:underline"
-        >
-          honest.money
-        </a>{" "}
-        ecosystem.
-      </p>
+      <p>{"\n"}</p>
       <ul className="mt-2 flex items-center justify-center gap-4">
         <li><Link to="/manifesto" className="hover:text-foreground">Manifesto</Link></li>
         <li aria-hidden>·</li>
