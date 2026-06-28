@@ -154,8 +154,15 @@ export function keyControlsAddress(
   if (chain === "eth") {
     return list.some(a => a.toLowerCase() === exp.toLowerCase());
   }
+  // BCH cashaddr is canonically lowercase; legacy base58 is case-sensitive.
+  // Normalize the comparison so either encoding matches.
+  if (chain === "bch") {
+    const expNorm = exp.includes(":") ? exp.toLowerCase() : exp;
+    return list.some(a => (a.includes(":") ? a.toLowerCase() === expNorm.toLowerCase() : a === expNorm));
+  }
   return list.includes(exp);
 }
+
 
 // ---------------------------------------------------------------------------
 // Derivation internals
