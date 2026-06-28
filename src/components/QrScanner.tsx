@@ -63,6 +63,11 @@ export function QrScanner({ onResult, paused: _paused }: Props) {
         { fps: 10, qrbox: { width: 240, height: 240 } },
         text => {
           if (gotResultRef.current) return;
+          // Packaging carries marketing/help QRs that resolve to URLs. Real
+          // Cold Storage Coin QRs are bare addresses or BIP-21 URIs (bitcoin:,
+          // ethereum:, etc.) — never http(s). Ignore web links so the camera
+          // doesn't latch onto the wrong code.
+          if (/^https?:\/\//i.test(text.trim())) return;
           gotResultRef.current = true;
           // Pause synchronously to stop further frames, then surface the hit.
           try { scannerRef.current?.pause(true); } catch { /* ignore */ }
