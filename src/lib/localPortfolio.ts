@@ -53,6 +53,11 @@ export function removeLocalCoin(id: string): void {
   write(read().filter(c => c.id !== id));
 }
 
+export function renameLocalCoin(id: string, label: string): void {
+  const trimmed = label.trim();
+  write(read().map(c => c.id === id ? { ...c, label: trimmed || undefined } : c));
+}
+
 export function getLocalCoin(id: string): LocalCoin | undefined {
   return read().find(c => c.id === id);
 }

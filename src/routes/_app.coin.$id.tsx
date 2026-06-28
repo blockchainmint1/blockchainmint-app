@@ -5,10 +5,10 @@ import { getTxHistory, lookupAddress } from "@/lib/chains.functions";
 import { TokenList } from "@/components/TokenList";
 import { CoinMedallion } from "@/components/CoinMedallion";
 import { CHAINS, fmtAmount, fmtUsd } from "@/lib/chains";
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-import { getLocalCoin, removeLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
+import { getLocalCoin, removeLocalCoin, renameLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
 import { cacheCoinHistory, clearCachedHistory, getCachedHistory } from "@/lib/localHistory";
 
 export const Route = createFileRoute("/_app/coin/$id")({
@@ -83,7 +83,7 @@ function CoinPage() {
 
       <div className="mt-6 flex flex-col items-center text-center">
         <CoinMedallion chain={coin.chain} size={140} />
-        <h1 className="mt-5 font-serif text-2xl text-foreground">{coin.label || `${ch.name} coin`}</h1>
+        <CoinTitle coin={coin} defaultLabel={`${ch.name} coin`} onRename={(l) => setCoin({ ...coin, label: l || undefined })} />
         <p className="num mt-3 font-serif text-4xl text-foreground">
           {summary ? fmtAmount(summary.balance, ch.decimals, 6) : "—"} <span className="text-base text-muted-foreground">{ch.ticker}</span>
         </p>
@@ -148,6 +148,47 @@ function CoinPage() {
         <Trash2 className="size-4" /> Remove coin
       </button>
     </div>
+  );
+}
+
+function CoinTitle({ coin, defaultLabel, onRename }: { coin: LocalCoin; defaultLabel: string; onRename: (label: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(coin.label ?? "");
+
+  function save() {
+    renameLocalCoin(coin.id, value);
+    onRename(value.trim());
+    setEditing(false);
+    toast.success("Nickname saved.");
+  }
+
+  if (editing) {
+    return (
+      <div className="mt-5 flex w-full max-w-xs items-center gap-1.5">
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+          placeholder={defaultLabel}
+          maxLength={40}
+          className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-center font-serif text-lg text-foreground outline-none focus:border-primary"
+        />
+        <button onClick={save} className="rounded-md border border-border bg-secondary p-2 hover:bg-secondary/80" aria-label="Save">
+          <Check className="size-4" />
+        </button>
+        <button onClick={() => { setValue(coin.label ?? ""); setEditing(false); }} className="rounded-md border border-border bg-secondary p-2 hover:bg-secondary/80" aria-label="Cancel">
+          <X className="size-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => setEditing(true)} className="group mt-5 inline-flex items-center gap-2 text-foreground">
+      <h1 className="font-serif text-2xl">{coin.label || defaultLabel}</h1>
+      <Pencil className="size-3.5 text-muted-foreground opacity-60 group-hover:opacity-100" />
+    </button>
   );
 }
 
