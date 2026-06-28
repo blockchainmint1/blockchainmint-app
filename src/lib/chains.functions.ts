@@ -477,8 +477,9 @@ export const homePortfolio = createServerFn({ method: "GET" })
 // SWEEP support: UTXOs, fee rate, broadcast
 // ============================================================================
 
-const SweepChainSchema = z.enum(["btc", "ltc", "doge", "txc"] as const);
+const SweepChainSchema = z.enum(["btc", "ltc", "doge", "txc", "bch"] as const);
 type SweepChain = z.infer<typeof SweepChainSchema>;
+
 
 export type SweepUtxo = { txid: string; vout: number; value: number };
 
