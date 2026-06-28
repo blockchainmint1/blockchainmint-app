@@ -14,7 +14,9 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { ripemd160 } from "@noble/hashes/legacy.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { base58check, bech32 } from "@scure/base";
+import { encodeCashAddr } from "./cashaddr";
 import type { ChainId } from "./chains";
+
 
 // ---------------------------------------------------------------------------
 // Network params (WIF version byte + address prefix + bech32 HRP)
