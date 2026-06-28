@@ -196,24 +196,59 @@ function CoinTitle({ coin, defaultLabel, onRename }: { coin: LocalCoin; defaultL
 
 function ReceiveBlock({ address, explorerUrl }: { address: string; explorerUrl: string }) {
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
   async function copy() {
     await navigator.clipboard.writeText(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
+
+  useEffect(() => {
+    if (!qrOpen) { setQrDataUrl(null); return; }
+    let cancelled = false;
+    QRCode.toDataURL(address, { margin: 1, width: 320, color: { dark: "#000000", light: "#ffffff" } })
+      .then(url => { if (!cancelled) setQrDataUrl(url); })
+      .catch(() => { if (!cancelled) setQrDataUrl(null); });
+    return () => { cancelled = true; };
+  }, [qrOpen, address]);
+
   return (
     <div className="mt-6 rounded-xl border border-border bg-card p-4">
       <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Receive address</p>
       <p className="mt-2 break-all font-mono text-xs text-foreground">{address}</p>
-      <div className="mt-3 flex gap-2">
-        <button onClick={copy} className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-secondary/80">
-          <Copy className="size-3.5" /> {copied ? "Copied" : "Copy"}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <button onClick={copy} className="flex items-center justify-center gap-1 rounded-md border border-border bg-secondary px-2 py-1.5 text-[11px] font-medium hover:bg-secondary/80">
+          <Copy className="size-3" /> {copied ? "Copied" : "Copy"}
         </button>
         <a href={explorerUrl} target="_blank" rel="noopener noreferrer"
-           className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-secondary/80">
-          <ExternalLink className="size-3.5" /> Explorer
+           className="flex items-center justify-center gap-1 rounded-md border border-border bg-secondary px-2 py-1.5 text-[11px] font-medium hover:bg-secondary/80">
+          <ExternalLink className="size-3" /> Explorer
         </a>
+        <button onClick={() => setQrOpen(true)} className="flex items-center justify-center gap-1 rounded-md border border-border bg-secondary px-2 py-1.5 text-[11px] font-medium hover:bg-secondary/80">
+          <QrCode className="size-3" /> QR
+        </button>
       </div>
+
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Receive address</DialogTitle>
+            <DialogDescription>Scan this QR code to send funds to this coin.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-3 py-2">
+            {qrDataUrl ? (
+              <div className="rounded-lg bg-white p-3">
+                <img src={qrDataUrl} alt="Address QR code" className="size-48" />
+              </div>
+            ) : (
+              <div className="grid size-48 place-items-center rounded-lg bg-muted text-muted-foreground text-xs">Generating…</div>
+            )}
+            <p className="max-w-[240px] break-all text-center font-mono text-[10px] text-muted-foreground">{address}</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
