@@ -92,11 +92,13 @@ export function QrScanner({ onResult, paused }: Props) {
     const s = scannerRef.current;
     if (s) {
       try { await s.stop(); } catch { /* ignore */ }
-      s.clear();
+      try { s.clear(); } catch { /* ignore */ }
       scannerRef.current = null;
     }
+    gotResultRef.current = false;
     setActive(false);
   }
+
 
   return (
     <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-border bg-secondary">
