@@ -18,14 +18,18 @@ const ChainIdSchema = z.enum([
   "btc","eth","ltc","doge","bch","bsc","ada","sol","bnb","txc","iskander",
 ] as const);
 
-export type OmniToken = {
-  propertyId: number;
+export type Layer2Token = {
+  id: string;                // propertyId for Omni, contractAddress for ERC20
+  type: "omni" | "erc20";
   name: string;
   ticker?: string;
-  balance: number;     // human units
+  balance: number;             // human units
   reserved?: number;
   divisible?: boolean;
 };
+
+// Backwards-compat alias
+export type OmniToken = Layer2Token;
 
 export type AddressSummary = {
   chain: ChainId;
