@@ -98,9 +98,10 @@ export function QrScanner({ onResult, paused }: Props) {
             </p>
             <button
               onClick={start}
-              className="mt-4 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+              disabled={starting}
+              className="mt-4 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
-              <Camera className="size-3.5" /> Start camera
+              <Camera className="size-3.5" /> {starting ? "Starting…" : "Start camera"}
             </button>
             {error && <p className="mt-3 text-[11px] text-destructive">{error}</p>}
           </div>
