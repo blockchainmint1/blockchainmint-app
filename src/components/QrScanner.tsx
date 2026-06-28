@@ -21,9 +21,12 @@ function preload() {
  * Live camera QR reader. Requests camera permission lazily on user tap so
  * iOS Safari doesn't reject the call. Cleans up cleanly on unmount.
  */
-export function QrScanner({ onResult, paused }: Props) {
+export function QrScanner({ onResult, paused: _paused }: Props) {
   const containerId = "qr-reader-region";
   const scannerRef = useRef<Html5QrcodeType | null>(null);
+  const gotResultRef = useRef(false);
+  const onResultRef = useRef(onResult);
+  onResultRef.current = onResult;
   const [active, setActive] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,22 +36,24 @@ export function QrScanner({ onResult, paused }: Props) {
     return () => {
       const s = scannerRef.current;
       if (s) {
-        s.stop().catch(() => {});
-        s.clear();
+        s.stop().catch(() => {}).finally(() => {
+          try { s.clear(); } catch { /* ignore */ }
+        });
         scannerRef.current = null;
       }
     };
   }, []);
 
-  useEffect(() => {
-    if (!active || !scannerRef.current) return;
-    if (paused) scannerRef.current.pause(true);
-    else scannerRef.current.resume();
-  }, [paused, active]);
+  // We pause synchronously inside the scan callback once we get a hit, so no
+  // separate effect is needed to react to `paused`. Calling resume()/pause()
+  // outside of the right scanner state throws from inside html5-qrcode and
+  // those throws can escape React's error boundary in some builds.
+
 
   async function start() {
     setError(null);
     setStarting(true);
+    gotResultRef.current = false;
     try {
       const mod = await preload();
       const scanner = new mod.Html5Qrcode(containerId, { verbose: false });
@@ -56,7 +61,13 @@ export function QrScanner({ onResult, paused }: Props) {
       await scanner.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 240, height: 240 } },
-        text => onResult(text),
+        text => {
+          if (gotResultRef.current) return;
+          gotResultRef.current = true;
+          // Pause synchronously to stop further frames, then surface the hit.
+          try { scannerRef.current?.pause(true); } catch { /* ignore */ }
+          try { onResultRef.current(text); } catch (err) { console.error(err); }
+        },
         () => { /* per-frame failures are noisy; ignore */ },
       );
       setActive(true);
@@ -79,11 +90,13 @@ export function QrScanner({ onResult, paused }: Props) {
     const s = scannerRef.current;
     if (s) {
       try { await s.stop(); } catch { /* ignore */ }
-      s.clear();
+      try { s.clear(); } catch { /* ignore */ }
       scannerRef.current = null;
     }
+    gotResultRef.current = false;
     setActive(false);
   }
+
 
   return (
     <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-border bg-secondary">
