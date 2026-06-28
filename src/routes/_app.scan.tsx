@@ -1,14 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { verifyMintRecord } from "@/lib/chains.functions";
 import { CHAIN_OPTIONS, CHAINS, type ChainId } from "@/lib/chains";
-import { ShieldCheck, Coins, Keyboard } from "lucide-react";
+import { ShieldCheck, Coins, Keyboard, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { QrScanner } from "@/components/QrScanner";
 import { parseCoinPayload, detectChain } from "@/lib/parseCoinPayload";
 import { addLocalCoin } from "@/lib/localPortfolio";
+import { CoinLogo } from "@/components/CoinLogo";
+import QRCode from "qrcode";
 
 export const Route = createFileRoute("/_app/scan")({
   head: () => ({ meta: [{ title: "Scan — Blockchain Mint" }] }),
