@@ -1,105 +1,66 @@
+# Push Notifications — v1 Plan
 
-# Blockchain Mint v2 — Plan
+Build the full push pipeline now so alerts are ready the moment we wrap in Capacitor. Native device tokens only land on a real device, but everything behind them (watcher, diff engine, threshold config, dispatch) can be built and tested today.
 
-A rebuild of the Cold Storage Coins / Blockchain Mint companion app, distributed through Apple App Store and Google Play. Built as a TanStack Start web app, wrapped natively with Capacitor. Part of the honest.money ecosystem.
+## What ships
 
-## Product Scope
+1. **Anonymous device identity.** A random `device_id` minted in `localStorage` on first launch. Sent with every server call that needs to know "which device is this." No login required.
+2. **Per-device watch sync.** Whenever the local portfolio changes (add coin, rename, delete), push the watched address list up to the backend keyed by `device_id`.
+3. **Per-coin alert config UI.** On each coin's detail page, a "Notifications" section to toggle Incoming, set Balance threshold, and set Price threshold. Stored locally + synced to the backend.
+4. **Backend watcher.** A `pg_cron` job every 15 min hits `/api/public/hooks/watch-tick`, which:
+   - Pulls every active watched address.
+   - Re-fetches balance + latest tx for each (reuses the existing chain helpers).
+   - Diffs vs. stored last-seen state.
+   - Emits alert rows for incoming funds / balance crossings / price crossings.
+   - Dispatches push via FCM HTTP v1.
+5. **Notifications inbox.** A `/alerts` screen replacing the current "coming soon" stub — lists historical alerts pulled from the backend by `device_id`, marks them read.
+6. **Capacitor token registration (wired but inert in browser).** A `registerForPush()` helper that on native calls `PushNotifications.register()` and POSTs the APNs/FCM token to the backend; on web it no-ops cleanly. When you wrap with Capacitor later, push starts working with zero extra code.
 
-The app does NOT generate or hold private keys. It is a companion + verification + commerce app for already-loaded physical coins.
+## What needs your action (later, not now)
 
-Core jobs:
-1. **Verify authenticity** — scan a coin (QR / NFC / public address) and confirm it's a genuine Cold Storage Coins / Blockchain Mint product, show mint metadata.
-2. **Check balances & history** — read-only blockchain lookup for any public address.
-3. **Receive** — show address + QR for a watched coin so others can send funds to it.
-4. **Alerts & notifications** — push notification when a watched address receives, spends, or crosses a threshold; price alerts.
-5. **Sweep / redeem** — import a coin's private key (camera-scan the hidden key under the tamper sticker) and broadcast a sweep transaction to an address the user chooses. Key is used in-memory only, never stored.
-6. **Shop** — browse and order physical coins, tied into honest.money checkout.
+To actually deliver pushes on a real phone we'll need **one** of these from you when we're ready to test on device:
 
-## Supported Chains (launch)
+- **Firebase Cloud Messaging service account JSON** — FCM v1 handles Android natively AND iOS (Firebase forwards to APNs for you, given an APNs key). One credential, both platforms. Recommended.
+- OR raw Apple **APNs auth key** (.p8) + a separate FCM setup for Android. More moving parts, no benefit unless you're avoiding Firebase entirely.
 
-BTC, LTC, DOGE, BCH, ETH (+ ERC-20 tokens), BSC (+ BEP-20), ADA, SOL, BNB, TEXITcoin (TXC), Iskander.
+Either way I'll guide you through the console steps when we get to device testing. For now the dispatch layer is built against FCM v1 with a placeholder secret name (`FCM_SERVICE_ACCOUNT_JSON`) so it slots in cleanly.
 
-Per-chain work is the long pole — see Phasing below.
+## What can't be tested in the preview
 
-## Information Architecture
+Push delivery itself. Everything else (the watcher running, diffs detected, alert rows written, inbox populating, threshold UI) IS testable today. The pipeline up to "would have sent push" works end-to-end; the last hop becomes live the moment a real device registers a token.
 
-```text
-/                      Home: watched coins, total value, recent activity
-/scan                  Camera: QR / NFC scan → verify or sweep flow
-/verify/:address       Authenticity result + mint metadata + chain summary
-/coin/:id              Watched coin detail: balance, tx history, receive, alerts
-/sweep                 Guided sweep wizard (scan key → choose dest → confirm → broadcast)
-/shop                  Product grid (honest.money catalog)
-/shop/:slug            Product detail + buy
-/alerts                Alert rules list + create
-/settings              Currency, theme, notifications, security (biometric lock)
-/about                 Manifesto, terms, privacy, honest.money link
-```
+---
 
-Bottom tab bar (native feel): Home · Scan · Shop · Alerts · Settings.
+## Technical details
 
-## Key Handling Rules (non-negotiable)
+### New DB tables (migration)
 
-- App never generates private keys.
-- Sweep keys live in memory only for the duration of the wizard, then are zeroed. No disk, no cloud, no logs, no analytics events containing key material.
-- Watched addresses (public only) are stored locally and optionally synced to the user's account for push notifications.
-- Biometric lock (Face ID / fingerprint) gates the sweep flow.
+- `devices` — `device_id uuid pk`, `push_token text null`, `push_platform text null` (`ios`/`android`/`web`), `created_at`, `last_seen_at`. RLS: nobody (server-only writes via service role).
+- `watched_addresses_v2` (replaces the old auth-bound one for this purpose) — `id pk`, `device_id`, `chain`, `address`, `nickname`, `last_balance numeric`, `last_tx_hash text`, `last_checked_at`. Unique `(device_id, chain, address)`.
+- `alert_rules_v2` — `id pk`, `device_id`, `chain`, `address`, `kind` enum (`incoming`/`balance_above`/`balance_below`/`price_above`/`price_below`), `threshold numeric null`, `enabled bool`, `created_at`.
+- `alerts` — `id pk`, `device_id`, `chain`, `address`, `kind`, `title`, `body`, `payload jsonb`, `tx_hash text null`, `created_at`, `read_at null`.
+- `price_state` — `chain pk`, `last_price numeric`, `last_checked_at`. Used to diff price thresholds without re-fetching every tick.
 
-## Native Capabilities (via Capacitor plugins)
+All four tables: `GRANT` to `service_role` only; RLS enabled with no public policies. Reads happen through a signed server fn that takes the `device_id` from the client (treat the id as a bearer secret stored in localStorage).
 
-- Camera (QR scan): `@capacitor-mlkit/barcode-scanning`
-- NFC read: `@capawesome-team/capacitor-nfc`
-- Push notifications: `@capacitor/push-notifications` + FCM (Android) / APNs (iOS)
-- Biometric auth: `capacitor-native-biometric`
-- Haptics, StatusBar, SplashScreen, App, Preferences
-- Share sheet for receive addresses
+### Server pieces
 
-## Backend (Lovable Cloud)
+- `src/lib/devices.functions.ts` — `registerDevice({ device_id, push_token?, platform? })`, `syncWatched({ device_id, addresses })`, `setAlertRules({ device_id, rules })`, `listAlerts({ device_id })`, `markAlertRead({ alert_id, device_id })`.
+- `src/routes/api/public/hooks/watch-tick.ts` — POST handler that runs the diff + dispatch loop. Authenticated with the Supabase anon key in the `apikey` header (cron pattern). Per-chain fan-out batched by provider to stay polite to Blockchair / Litecoinspace / etc.
+- `src/lib/push.server.ts` — FCM v1 dispatcher. Reads `FCM_SERVICE_ACCOUNT_JSON` from env, mints an OAuth token via google-auth-library, POSTs to `fcm.googleapis.com/v1/projects/.../messages:send`. Silently logs and skips when the secret is missing (so today's preview doesn't error).
+- `pg_cron` job: `*/15 * * * *` calling the hook.
 
-- Auth: email/password + Google + Apple (Apple required for App Store).
-- Tables: `profiles`, `watched_addresses`, `alert_rules`, `device_tokens`, `products`, `orders`, `verification_records`.
-- Server functions: `lookupAddress`, `getTxHistory`, `broadcastTx`, `verifyMintRecord`, `createAlert`, `registerDeviceToken`, `createOrder`.
-- Public route `src/routes/api/public/chain-webhook.ts` for incoming chain-watcher webhooks → push notifications.
-- Chain data via per-chain RPC/explorer APIs (Blockstream/Mempool, Etherscan, BscScan, Blockchair, Helius for SOL, Blockfrost for ADA, TXC node).
-- Push delivery via FCM (covers both Android directly and iOS via APNs).
+### Client pieces
 
-## Design Direction
+- `src/lib/deviceId.ts` — get-or-mint anonymous device id.
+- `src/lib/push.ts` — `registerForPush()` (dynamic-imports `@capacitor/push-notifications` on native, no-ops on web).
+- `src/lib/alertsSync.ts` — debounced effect: whenever local portfolio or alert rules change, push state to backend.
+- `src/components/CoinAlerts.tsx` — three toggles + two threshold inputs, lives on the coin detail page.
+- `src/routes/_app.alerts.tsx` — replaces the current placeholder; lists alerts from backend, pull-to-refresh, mark-read on tap.
 
-Hardware-product feel — brushed metal, mint-mark engraving, monospaced address text, satisfying tactile confirmations. NOT generic crypto-wallet purple. I'll generate 3 design directions before building the UI shell.
+### Phase order I'll build in
 
-## Footer (per workspace standard)
-
-Part of the [honest.money](https://honest.money) ecosystem · Terms · Privacy · Manifesto. Terms / Privacy / Manifesto pages drafted as part of this build (privacy doc is also required for both store listings).
-
-## Phasing
-
-**Phase 1 — Web foundation + 3 chains (BTC, ETH, TXC)**
-Routes, auth, design system, watched addresses, balance lookup, tx history, receive, verify flow, shop scaffolding, push token registration, alerts table. Sweep for the 3 chains. Footer + legal pages.
-
-**Phase 2 — Native wrap**
-Capacitor init, iOS + Android projects, camera/NFC/biometric/push plugins wired, app icons + splash, deep links for `coldstoragecoins://verify/:address`.
-
-**Phase 3 — Remaining chains**
-LTC, DOGE, BCH, BSC + BEP-20, ADA, SOL, BNB, Iskander, ERC-20 token support. One chain adapter per PR.
-
-**Phase 4 — Store submission (I'll write step-by-step guides for each)**
-- Apple: bundle ID, App Store Connect listing, screenshots (6.7" + 6.1" + iPad), privacy nutrition labels, export compliance (uses standard crypto → self-classification), TestFlight, review notes explaining "no key generation, verification + sweep companion for physical coins" to pre-empt the wallet-policy reviewer.
-- Google: Play Console listing, signed AAB, data safety form, content rating, internal testing track → closed → production. Financial-features declaration.
-
-**Phase 5 — Shop checkout + ongoing**
-honest.money product sync, Stripe or existing honest.money payment rail, order tracking, post-launch alert refinements.
-
-## What I need from you to start Phase 1
-
-1. Confirm honest.money is the canonical brand link (and whether shop checkout goes through an existing honest.money endpoint or needs Stripe set up inside this app).
-2. Whether the existing app's user accounts / order history need to be migrated, or this is a clean start.
-3. Bundle IDs you want to keep vs. new — Apple `id1352363663` (`com.???`) and Google `com.coldstoragecoins`. Keeping them lets you ship as an update to existing installs; new bundle IDs mean new listings.
-
-## Technical Notes (for reference)
-
-- Stack: TanStack Start v1 + React 19 + Tailwind v4 + shadcn, Lovable Cloud (Postgres + auth + edge), Capacitor 6 for native wrap.
-- Cloudflare Workers runtime for server fns — all chain calls go through `fetch` to RPC/explorer HTTPS endpoints (no Node-only libs). `bitcoinjs-lib`, `ethers`, `@solana/web3.js`, `@emurgo/cardano-serialization-lib-browser` are all Worker/edge compatible.
-- Sweep signing happens **client-side** in the browser/webview using pure-JS libs so private keys never touch the server.
-- Push: device token → Cloud table → server fn calls FCM; chain webhooks fan out per watched address.
-- No service worker / PWA offline cache — this ships as a native app, not an installable PWA, so we skip the offline-SW path entirely.
-- Lovable can't submit to the stores or sign binaries; I'll deliver the Capacitor projects + a written submission runbook you execute locally with Xcode and Android Studio.
+1. DB migration + server fns + cron route (testable via curl).
+2. Client wiring: device id, sync, alert rules UI, alerts inbox.
+3. FCM dispatcher (dormant until you add the credential).
+4. Capacitor push registration helper (dormant until we wrap).
