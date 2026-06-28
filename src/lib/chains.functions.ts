@@ -446,21 +446,33 @@ async function adaHistory(address: string): Promise<TxRecord[]> {
   } catch { return []; }
 }
 
-// ---------- Solana via public mainnet RPC ----------------------------------
+// ---------- Solana via public RPC (with fallbacks) -------------------------
 
-const SOL_RPC = "https://api.mainnet-beta.solana.com";
+const SOL_RPCS = [
+  "https://solana-rpc.publicnode.com",
+  "https://api.mainnet-beta.solana.com",
+  "https://solana.drpc.org",
+];
 
 async function solRpc<T>(method: string, params: unknown[]): Promise<T | null> {
-  try {
-    const res = await fetch(SOL_RPC, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    });
-    if (!res.ok) return null;
-    const j = (await res.json()) as { result?: T; error?: unknown };
-    return (j.result ?? null) as T | null;
-  } catch { return null; }
+  for (const url of SOL_RPCS) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "accept": "application/json",
+          "user-agent": "BlockchainMint/1.0",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      });
+      if (!res.ok) continue;
+      const j = (await res.json()) as { result?: T; error?: unknown };
+      if (j.error) continue;
+      return (j.result ?? null) as T | null;
+    } catch { /* try next */ }
+  }
+  return null;
 }
 
 async function solSummary(address: string): Promise<AddressSummary> {
