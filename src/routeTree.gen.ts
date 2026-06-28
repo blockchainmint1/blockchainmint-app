@@ -23,6 +23,7 @@ import { Route as AppScanRouteImport } from './routes/_app.scan'
 import { Route as AppHomeRouteImport } from './routes/_app.home'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as AppCoinIdRouteImport } from './routes/_app.coin.$id'
+import { Route as ApiPublicHooksWatchTickRouteImport } from './routes/api/public/hooks/watch-tick'
 import { Route as AppVerifyChainAddressRouteImport } from './routes/_app.verify.$chain.$address'
 
 const TermsRoute = TermsRouteImport.update({
@@ -94,6 +95,11 @@ const AppCoinIdRoute = AppCoinIdRouteImport.update({
   path: '/coin/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicHooksWatchTickRoute = ApiPublicHooksWatchTickRouteImport.update({
+  id: '/api/public/hooks/watch-tick',
+  path: '/api/public/hooks/watch-tick',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppVerifyChainAddressRoute = AppVerifyChainAddressRouteImport.update({
   id: '/verify/$chain/$address',
   path: '/verify/$chain/$address',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/sweep': typeof AppSweepRoute
   '/coin/$id': typeof AppCoinIdRoute
   '/verify/$chain/$address': typeof AppVerifyChainAddressRoute
+  '/api/public/hooks/watch-tick': typeof ApiPublicHooksWatchTickRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/sweep': typeof AppSweepRoute
   '/coin/$id': typeof AppCoinIdRoute
   '/verify/$chain/$address': typeof AppVerifyChainAddressRoute
+  '/api/public/hooks/watch-tick': typeof ApiPublicHooksWatchTickRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/_app/sweep': typeof AppSweepRoute
   '/_app/coin/$id': typeof AppCoinIdRoute
   '/_app/verify/$chain/$address': typeof AppVerifyChainAddressRoute
+  '/api/public/hooks/watch-tick': typeof ApiPublicHooksWatchTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/sweep'
     | '/coin/$id'
     | '/verify/$chain/$address'
+    | '/api/public/hooks/watch-tick'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/sweep'
     | '/coin/$id'
     | '/verify/$chain/$address'
+    | '/api/public/hooks/watch-tick'
   id:
     | '__root__'
     | '/'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/_app/sweep'
     | '/_app/coin/$id'
     | '/_app/verify/$chain/$address'
+    | '/api/public/hooks/watch-tick'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -210,6 +222,7 @@ export interface RootRouteChildren {
   ManifestoRoute: typeof ManifestoRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicHooksWatchTickRoute: typeof ApiPublicHooksWatchTickRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -312,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCoinIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/hooks/watch-tick': {
+      id: '/api/public/hooks/watch-tick'
+      path: '/api/public/hooks/watch-tick'
+      fullPath: '/api/public/hooks/watch-tick'
+      preLoaderRoute: typeof ApiPublicHooksWatchTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/verify/$chain/$address': {
       id: '/_app/verify/$chain/$address'
       path: '/verify/$chain/$address'
@@ -354,6 +374,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManifestoRoute: ManifestoRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  ApiPublicHooksWatchTickRoute: ApiPublicHooksWatchTickRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

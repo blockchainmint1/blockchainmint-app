@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getTxHistory, lookupAddress } from "@/lib/chains.functions";
 import { TokenList } from "@/components/TokenList";
 import { CoinLogo } from "@/components/CoinLogo";
+import { CoinAlerts } from "@/components/CoinAlerts";
 import { CHAINS, fmtAmount, fmtUsd } from "@/lib/chains";
 import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck, KeyRound, Trash2, Pencil, Check, X, QrCode } from "lucide-react";
 import { toast } from "sonner";
@@ -115,6 +116,8 @@ function CoinPage() {
           <KeyRound className="size-4" /> Sweep
         </Link>
       </div>
+
+      <CoinAlerts chain={coin.chain} address={coin.address} ticker={ch.ticker} />
 
       <h2 className="mt-8 mb-3 font-serif text-lg text-foreground">Recent activity</h2>
       {(txs ?? []).length === 0 ? (

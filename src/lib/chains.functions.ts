@@ -519,7 +519,7 @@ async function solHistory(address: string): Promise<TxRecord[]> {
 
 // ---------- Dispatch --------------------------------------------------------
 
-async function summarize(chain: ChainId, address: string): Promise<AddressSummary> {
+export async function summarize(chain: ChainId, address: string): Promise<AddressSummary> {
   if (chain === "btc") return esploraSummary(ESPLORA.btc, address);
   if (chain === "txc") {
     const base = await esploraSummary(ESPLORA.txc, address);
