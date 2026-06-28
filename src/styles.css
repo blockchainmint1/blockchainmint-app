@@ -75,59 +75,60 @@
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 }
 
+/* ---------- LIGHT (default) — vellum & ink ---------- */
 :root {
   --radius: 0.5rem;
 
-  --background: oklch(0.18 0.008 60);
-  --foreground: oklch(0.94 0.012 80);
+  --background: oklch(0.97 0.012 85);          /* warm vellum */
+  --foreground: oklch(0.22 0.012 60);          /* anthracite ink */
 
-  --card: oklch(0.22 0.009 60);
-  --card-foreground: oklch(0.94 0.012 80);
+  --card: oklch(0.99 0.008 85);
+  --card-foreground: oklch(0.22 0.012 60);
 
-  --popover: oklch(0.22 0.009 60);
-  --popover-foreground: oklch(0.94 0.012 80);
+  --popover: oklch(0.99 0.008 85);
+  --popover-foreground: oklch(0.22 0.012 60);
 
-  --primary: oklch(0.78 0.12 80);             /* struck champagne gold */
-  --primary-foreground: oklch(0.18 0.008 60);
+  --primary: oklch(0.62 0.13 75);              /* deeper struck gold for contrast on light */
+  --primary-foreground: oklch(0.99 0.005 85);
 
-  --secondary: oklch(0.28 0.008 65);          /* brushed steel surface */
-  --secondary-foreground: oklch(0.94 0.012 80);
+  --secondary: oklch(0.92 0.012 80);
+  --secondary-foreground: oklch(0.22 0.012 60);
 
-  --muted: oklch(0.26 0.007 65);
-  --muted-foreground: oklch(0.7 0.012 75);
+  --muted: oklch(0.93 0.01 80);
+  --muted-foreground: oklch(0.45 0.012 65);
 
-  --accent: oklch(0.62 0.13 45);              /* oxidized copper */
-  --accent-foreground: oklch(0.98 0.005 80);
+  --accent: oklch(0.55 0.14 45);
+  --accent-foreground: oklch(0.99 0.005 85);
 
-  --destructive: oklch(0.55 0.18 28);
-  --destructive-foreground: oklch(0.98 0.005 80);
+  --destructive: oklch(0.5 0.18 28);
+  --destructive-foreground: oklch(0.99 0.005 85);
 
-  --border: oklch(0.3 0.008 65);
-  --input: oklch(0.3 0.008 65);
-  --ring: oklch(0.78 0.12 80);
+  --border: oklch(0.86 0.012 75);
+  --input: oklch(0.86 0.012 75);
+  --ring: oklch(0.62 0.13 75);
 
-  --chart-1: oklch(0.78 0.12 80);
-  --chart-2: oklch(0.85 0.03 80);
-  --chart-3: oklch(0.62 0.13 45);
-  --chart-4: oklch(0.55 0.18 28);
-  --chart-5: oklch(0.7 0.05 60);
+  --chart-1: oklch(0.62 0.13 75);
+  --chart-2: oklch(0.78 0.05 80);
+  --chart-3: oklch(0.55 0.14 45);
+  --chart-4: oklch(0.5 0.18 28);
+  --chart-5: oklch(0.6 0.04 60);
 
-  --sidebar: oklch(0.2 0.008 60);
-  --sidebar-foreground: oklch(0.94 0.012 80);
-  --sidebar-primary: oklch(0.78 0.12 80);
-  --sidebar-primary-foreground: oklch(0.18 0.008 60);
-  --sidebar-accent: oklch(0.26 0.007 65);
-  --sidebar-accent-foreground: oklch(0.94 0.012 80);
-  --sidebar-border: oklch(0.3 0.008 65);
-  --sidebar-ring: oklch(0.78 0.12 80);
+  --sidebar: oklch(0.95 0.012 85);
+  --sidebar-foreground: oklch(0.22 0.012 60);
+  --sidebar-primary: oklch(0.62 0.13 75);
+  --sidebar-primary-foreground: oklch(0.99 0.005 85);
+  --sidebar-accent: oklch(0.92 0.012 80);
+  --sidebar-accent-foreground: oklch(0.22 0.012 60);
+  --sidebar-border: oklch(0.86 0.012 75);
+  --sidebar-ring: oklch(0.62 0.13 75);
 
-  --metal-gold: oklch(0.82 0.13 82);
-  --metal-silver: oklch(0.88 0.012 240);
-  --metal-copper: oklch(0.66 0.14 45);
-  --metal-brass: oklch(0.78 0.09 78);
+  --metal-gold: oklch(0.78 0.13 82);
+  --metal-silver: oklch(0.85 0.012 240);
+  --metal-copper: oklch(0.62 0.14 45);
+  --metal-brass: oklch(0.74 0.09 78);
 }
 
-/* App is intentionally dark-only — feels like a coin in a display tray. */
+/* ---------- DARK — coin in a display tray ---------- */
 .dark {
   --background: oklch(0.18 0.008 60);
   --foreground: oklch(0.94 0.012 80);
@@ -148,11 +149,19 @@
   --border: oklch(0.3 0.008 65);
   --input: oklch(0.3 0.008 65);
   --ring: oklch(0.78 0.12 80);
+  --sidebar: oklch(0.2 0.008 60);
+  --sidebar-accent: oklch(0.26 0.007 65);
+  --sidebar-border: oklch(0.3 0.008 65);
+  --metal-gold: oklch(0.82 0.13 82);
+  --metal-silver: oklch(0.88 0.012 240);
+  --metal-copper: oklch(0.66 0.14 45);
+  --metal-brass: oklch(0.78 0.09 78);
 }
 
 @layer base {
   * { border-color: var(--color-border); }
-  html { color-scheme: dark; background-color: var(--color-background); }
+  html { color-scheme: light; background-color: var(--color-background); }
+  html.dark { color-scheme: dark; }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -163,6 +172,7 @@
   /* Tabular numerics everywhere we show money/balances */
   .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 }
+
 
 /* Metal medallion utility — used on coin cards */
 @utility medallion-gold {

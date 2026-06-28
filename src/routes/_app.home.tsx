@@ -9,6 +9,7 @@ import { ScanLine, Plus, RefreshCw } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
 import { cacheCoinHistory, getCachedHistory } from "@/lib/localHistory";
 import logoAsset from "@/assets/bm-logo.png.asset.json";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/_app/home")({
   head: () => ({
@@ -96,14 +97,17 @@ function HomePage() {
             <img src={logoAsset.url} alt="Blockchain Mint" className="h-6 w-auto" />
             <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">Portfolio</p>
           </div>
-          <button
-            onClick={refresh}
-            disabled={isFetching}
-            aria-label="Refresh prices"
-            className="rounded-full border border-border bg-card p-2 text-muted-foreground transition hover:text-foreground disabled:opacity-50"
-          >
-            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={refresh}
+              disabled={isFetching}
+              aria-label="Refresh prices"
+              className="rounded-full border border-border bg-card p-2 text-muted-foreground transition hover:text-foreground disabled:opacity-50"
+            >
+              <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         </div>
         <div className="num mt-1 font-serif text-5xl text-foreground">{fmtUsd(totalFiat)}</div>
         <p className="mt-1 text-xs text-muted-foreground">
