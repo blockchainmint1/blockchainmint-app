@@ -9,38 +9,265 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ManifestoRouteImport } from './routes/manifesto'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppSweepRouteImport } from './routes/_app.sweep'
+import { Route as AppShopRouteImport } from './routes/_app.shop'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppScanRouteImport } from './routes/_app.scan'
+import { Route as AppHomeRouteImport } from './routes/_app.home'
+import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
+import { Route as AppShopSlugRouteImport } from './routes/_app.shop.$slug'
+import { Route as AppCoinIdRouteImport } from './routes/_app.coin.$id'
+import { Route as AppVerifyChainAddressRouteImport } from './routes/_app.verify.$chain.$address'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManifestoRoute = ManifestoRouteImport.update({
+  id: '/manifesto',
+  path: '/manifesto',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSweepRoute = AppSweepRouteImport.update({
+  id: '/sweep',
+  path: '/sweep',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppShopRoute = AppShopRouteImport.update({
+  id: '/shop',
+  path: '/shop',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppScanRoute = AppScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHomeRoute = AppHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAlertsRoute = AppAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppShopSlugRoute = AppShopSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => AppShopRoute,
+} as any)
+const AppCoinIdRoute = AppCoinIdRouteImport.update({
+  id: '/coin/$id',
+  path: '/coin/$id',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppVerifyChainAddressRoute = AppVerifyChainAddressRouteImport.update({
+  id: '/verify/$chain/$address',
+  path: '/verify/$chain/$address',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/manifesto': typeof ManifestoRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
+  '/alerts': typeof AppAlertsRoute
+  '/home': typeof AppHomeRoute
+  '/scan': typeof AppScanRoute
+  '/settings': typeof AppSettingsRoute
+  '/shop': typeof AppShopRouteWithChildren
+  '/sweep': typeof AppSweepRoute
+  '/coin/$id': typeof AppCoinIdRoute
+  '/shop/$slug': typeof AppShopSlugRoute
+  '/verify/$chain/$address': typeof AppVerifyChainAddressRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/manifesto': typeof ManifestoRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
+  '/alerts': typeof AppAlertsRoute
+  '/home': typeof AppHomeRoute
+  '/scan': typeof AppScanRoute
+  '/settings': typeof AppSettingsRoute
+  '/shop': typeof AppShopRouteWithChildren
+  '/sweep': typeof AppSweepRoute
+  '/coin/$id': typeof AppCoinIdRoute
+  '/shop/$slug': typeof AppShopSlugRoute
+  '/verify/$chain/$address': typeof AppVerifyChainAddressRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/manifesto': typeof ManifestoRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
+  '/_app/alerts': typeof AppAlertsRoute
+  '/_app/home': typeof AppHomeRoute
+  '/_app/scan': typeof AppScanRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/shop': typeof AppShopRouteWithChildren
+  '/_app/sweep': typeof AppSweepRoute
+  '/_app/coin/$id': typeof AppCoinIdRoute
+  '/_app/shop/$slug': typeof AppShopSlugRoute
+  '/_app/verify/$chain/$address': typeof AppVerifyChainAddressRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/manifesto'
+    | '/privacy'
+    | '/terms'
+    | '/alerts'
+    | '/home'
+    | '/scan'
+    | '/settings'
+    | '/shop'
+    | '/sweep'
+    | '/coin/$id'
+    | '/shop/$slug'
+    | '/verify/$chain/$address'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/manifesto'
+    | '/privacy'
+    | '/terms'
+    | '/alerts'
+    | '/home'
+    | '/scan'
+    | '/settings'
+    | '/shop'
+    | '/sweep'
+    | '/coin/$id'
+    | '/shop/$slug'
+    | '/verify/$chain/$address'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/about'
+    | '/auth'
+    | '/manifesto'
+    | '/privacy'
+    | '/terms'
+    | '/_app/alerts'
+    | '/_app/home'
+    | '/_app/scan'
+    | '/_app/settings'
+    | '/_app/shop'
+    | '/_app/sweep'
+    | '/_app/coin/$id'
+    | '/_app/shop/$slug'
+    | '/_app/verify/$chain/$address'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  AboutRoute: typeof AboutRoute
+  AuthRoute: typeof AuthRoute
+  ManifestoRoute: typeof ManifestoRoute
+  PrivacyRoute: typeof PrivacyRoute
+  TermsRoute: typeof TermsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manifesto': {
+      id: '/manifesto'
+      path: '/manifesto'
+      fullPath: '/manifesto'
+      preLoaderRoute: typeof ManifestoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +275,115 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/sweep': {
+      id: '/_app/sweep'
+      path: '/sweep'
+      fullPath: '/sweep'
+      preLoaderRoute: typeof AppSweepRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/shop': {
+      id: '/_app/shop'
+      path: '/shop'
+      fullPath: '/shop'
+      preLoaderRoute: typeof AppShopRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/scan': {
+      id: '/_app/scan'
+      path: '/scan'
+      fullPath: '/scan'
+      preLoaderRoute: typeof AppScanRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/home': {
+      id: '/_app/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AppHomeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/alerts': {
+      id: '/_app/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AppAlertsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/shop/$slug': {
+      id: '/_app/shop/$slug'
+      path: '/$slug'
+      fullPath: '/shop/$slug'
+      preLoaderRoute: typeof AppShopSlugRouteImport
+      parentRoute: typeof AppShopRoute
+    }
+    '/_app/coin/$id': {
+      id: '/_app/coin/$id'
+      path: '/coin/$id'
+      fullPath: '/coin/$id'
+      preLoaderRoute: typeof AppCoinIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/verify/$chain/$address': {
+      id: '/_app/verify/$chain/$address'
+      path: '/verify/$chain/$address'
+      fullPath: '/verify/$chain/$address'
+      preLoaderRoute: typeof AppVerifyChainAddressRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppShopRouteChildren {
+  AppShopSlugRoute: typeof AppShopSlugRoute
+}
+
+const AppShopRouteChildren: AppShopRouteChildren = {
+  AppShopSlugRoute: AppShopSlugRoute,
+}
+
+const AppShopRouteWithChildren =
+  AppShopRoute._addFileChildren(AppShopRouteChildren)
+
+interface AppRouteChildren {
+  AppAlertsRoute: typeof AppAlertsRoute
+  AppHomeRoute: typeof AppHomeRoute
+  AppScanRoute: typeof AppScanRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppShopRoute: typeof AppShopRouteWithChildren
+  AppSweepRoute: typeof AppSweepRoute
+  AppCoinIdRoute: typeof AppCoinIdRoute
+  AppVerifyChainAddressRoute: typeof AppVerifyChainAddressRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAlertsRoute: AppAlertsRoute,
+  AppHomeRoute: AppHomeRoute,
+  AppScanRoute: AppScanRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppShopRoute: AppShopRouteWithChildren,
+  AppSweepRoute: AppSweepRoute,
+  AppCoinIdRoute: AppCoinIdRoute,
+  AppVerifyChainAddressRoute: AppVerifyChainAddressRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  AboutRoute: AboutRoute,
+  AuthRoute: AuthRoute,
+  ManifestoRoute: ManifestoRoute,
+  PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
