@@ -38,7 +38,7 @@ function Manifesto() {
         <h2 className="mt-8 font-serif text-2xl text-foreground">We answer to the holder.</h2>
         <p>Not to a regulator. Not to a payment processor. Not to a blockchain analytics partner. To the person holding the coin. Always.</p>
 
-        <p className="pt-8 text-sm">Part of the <a href="https://honest.money" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">honest.money</a> ecosystem.</p>
+        <p className="pt-8 text-sm">{"\n"}</p>
       </div>
       <Footer />
     </div>

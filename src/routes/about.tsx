@@ -28,9 +28,7 @@ function About() {
         <p>
           This app is the digital twin of the coin in your hand. Use it to verify the coin's authenticity against the public mint registry, watch its balance across eleven blockchains, receive funds into it, get notified when something moves, and — when you're ready — sweep it on the device that never let your private key leave it.
         </p>
-        <p>
-          Blockchain Mint is part of the <a href="https://honest.money" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">honest.money</a> ecosystem.
-        </p>
+        <p>{"\n"}</p>
       </div>
       <Footer />
     </div>

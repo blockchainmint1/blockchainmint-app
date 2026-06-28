@@ -67,13 +67,7 @@ function ShopPage() {
         </ul>
       )}
 
-      <p className="mt-8 text-center text-xs text-muted-foreground">
-        Part of the{" "}
-        <a href="https://honest.money" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-          honest.money
-        </a>{" "}
-        ecosystem.
-      </p>
+      <p className="mt-8 text-center text-xs text-muted-foreground">{"\n"}</p>
     </div>
   );
 }
