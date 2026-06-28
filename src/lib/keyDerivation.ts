@@ -14,7 +14,9 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { ripemd160 } from "@noble/hashes/legacy.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { base58check, bech32 } from "@scure/base";
+import { encodeCashAddr } from "./cashaddr";
 import type { ChainId } from "./chains";
+
 
 // ---------------------------------------------------------------------------
 // Network params (WIF version byte + address prefix + bech32 HRP)
@@ -152,8 +154,15 @@ export function keyControlsAddress(
   if (chain === "eth") {
     return list.some(a => a.toLowerCase() === exp.toLowerCase());
   }
+  // BCH cashaddr is canonically lowercase; legacy base58 is case-sensitive.
+  // Normalize the comparison so either encoding matches.
+  if (chain === "bch") {
+    const expNorm = exp.includes(":") ? exp.toLowerCase() : exp;
+    return list.some(a => (a.includes(":") ? a.toLowerCase() === expNorm.toLowerCase() : a === expNorm));
+  }
   return list.includes(exp);
 }
+
 
 // ---------------------------------------------------------------------------
 // Derivation internals
@@ -187,9 +196,15 @@ function derivePublicAddresses(
         // P2WPKH only from compressed pubkey; uncompressed not allowed in segwit.
         if (pub === pubCompressed) addrs.push(bech32P2wpkh(params.bech32Hrp, pkh));
       }
+      // BCH: also surface the modern CashAddr form so verification matches
+      // whichever encoding the coin / user has.
+      if (chain === "bch") {
+        addrs.push(encodeCashAddr("bitcoincash", 0, pkh));
+      }
     }
     addressesByChain[chain] = Array.from(new Set(addrs));
   }
+
 
   // Which chains is this key a plausible sweep candidate for? Everything we
   // derived for, ordered with hex-friendly chains first.

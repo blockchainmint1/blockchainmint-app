@@ -477,8 +477,9 @@ export const homePortfolio = createServerFn({ method: "GET" })
 // SWEEP support: UTXOs, fee rate, broadcast
 // ============================================================================
 
-const SweepChainSchema = z.enum(["btc", "ltc", "doge", "txc"] as const);
+const SweepChainSchema = z.enum(["btc", "ltc", "doge", "txc", "bch"] as const);
 type SweepChain = z.infer<typeof SweepChainSchema>;
+
 
 export type SweepUtxo = { txid: string; vout: number; value: number };
 
@@ -542,10 +543,16 @@ export const getSweepUtxos = createServerFn({ method: "POST" })
       ]);
       return { utxos, feeRate };
     }
-    // DOGE: blockchair only; relay min ~1000 sat/vB.
-    const utxos = await blockchairUtxos("dogecoin", address);
-    return { utxos, feeRate: 1000 };
+    if (chain === "doge") {
+      // DOGE: blockchair only; relay min ~1000 sat/vB.
+      const utxos = await blockchairUtxos("dogecoin", address);
+      return { utxos, feeRate: 1000 };
+    }
+    // BCH: blockchair only. Network fee target ~1 sat/vB.
+    const utxos = await blockchairUtxos("bitcoin-cash", address);
+    return { utxos, feeRate: 1 };
   });
+
 
 export const broadcastSweep = createServerFn({ method: "POST" })
   .inputValidator((input: { chain: SweepChain; rawHex: string }) =>
@@ -571,8 +578,9 @@ export const broadcastSweep = createServerFn({ method: "POST" })
         if (!res.ok) return { ok: false, error: text || `Broadcast failed (${res.status})` };
         return { ok: true, txid: text.trim() };
       }
-      // DOGE via Blockchair.
-      const res = await fetch("https://api.blockchair.com/dogecoin/push/transaction", {
+      // DOGE / BCH via Blockchair push endpoint.
+      const slug = chain === "doge" ? "dogecoin" : "bitcoin-cash";
+      const res = await fetch(`https://api.blockchair.com/${slug}/push/transaction`, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ data: rawHex }).toString(),
@@ -582,6 +590,7 @@ export const broadcastSweep = createServerFn({ method: "POST" })
       const txid = j.data?.transaction_hash;
       if (!txid) return { ok: false, error: "Broadcast accepted but no txid returned." };
       return { ok: true, txid };
+
     } catch (e) {
       return { ok: false, error: (e as Error).message };
     }
