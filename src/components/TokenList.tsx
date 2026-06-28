@@ -1,4 +1,4 @@
-import { type OmniToken } from "@/lib/chains.functions";
+import { type Layer2Token } from "@/lib/chains.functions";
 import { fmtAmount } from "@/lib/chains";
 import { Layers } from "lucide-react";
 
