@@ -148,26 +148,27 @@ async function omniTokensForAddress(address: string): Promise<OmniToken[] | unde
   type Raw = Array<{ propertyid: number; balance: string; reserved?: string; frozen?: string }>;
   const balances = await txcRpc<Raw>("omni_getallbalancesforaddress", [address]);
   if (!balances || balances.length === 0) return undefined;
-  const out: OmniToken[] = [];
-  for (const b of balances) {
-    // Fetch property metadata for name/divisibility (best-effort)
-    const meta = await txcRpc<{ name?: string; ticker?: string; divisible?: boolean }>(
-      "omni_getproperty", [b.propertyid],
-    );
-    const divisible = meta?.divisible !== false;
-    // Omni returns balances as decimal strings already in human units for
-    // divisible properties; indivisible properties are integer strings.
-    const bal = divisible ? Number(b.balance) : Number(b.balance);
-    out.push({
-      propertyId: b.propertyid,
-      name: meta?.name ?? `Property ${b.propertyid}`,
-      ticker: meta?.ticker,
-      balance: bal,
-      reserved: b.reserved ? Number(b.reserved) : undefined,
-      divisible,
-    });
-  }
-  return out;
+    const out: Layer2Token[] = [];
+    for (const b of balances) {
+      // Fetch property metadata for name/divisibility (best-effort)
+      const meta = await txcRpc<{ name?: string; ticker?: string; divisible?: boolean }>(
+        "omni_getproperty", [b.propertyid],
+      );
+      const divisible = meta?.divisible !== false;
+      // Omni returns balances as decimal strings already in human units for
+      // divisible properties; indivisible properties are integer strings.
+      const bal = divisible ? Number(b.balance) : Number(b.balance);
+      out.push({
+        id: String(b.propertyid),
+        type: "omni",
+        name: meta?.name ?? `Property ${b.propertyid}`,
+        ticker: meta?.ticker,
+        balance: bal,
+        reserved: b.reserved ? Number(b.reserved) : undefined,
+        divisible,
+      });
+    }
+    return out;
 }
 
 // ---------- ETH via Alchemy ------------------------------------------------
