@@ -446,27 +446,42 @@ async function adaHistory(address: string): Promise<TxRecord[]> {
   } catch { return []; }
 }
 
-// ---------- Solana via public mainnet RPC ----------------------------------
+// ---------- Solana via public RPC (with fallbacks) -------------------------
 
-const SOL_RPC = "https://api.mainnet-beta.solana.com";
+const SOL_RPCS = [
+  "https://solana-rpc.publicnode.com",
+  "https://api.mainnet-beta.solana.com",
+  "https://solana.drpc.org",
+];
 
 async function solRpc<T>(method: string, params: unknown[]): Promise<T | null> {
-  try {
-    const res = await fetch(SOL_RPC, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    });
-    if (!res.ok) return null;
-    const j = (await res.json()) as { result?: T; error?: unknown };
-    return (j.result ?? null) as T | null;
-  } catch { return null; }
+  for (const url of SOL_RPCS) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "accept": "application/json",
+          "user-agent": "BlockchainMint/1.0",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      });
+      if (!res.ok) continue;
+      const j = (await res.json()) as { result?: T; error?: unknown };
+      if (j.error) continue;
+      return (j.result ?? null) as T | null;
+    } catch { /* try next */ }
+  }
+  return null;
 }
 
 async function solSummary(address: string): Promise<AddressSummary> {
   try {
     const bal = await solRpc<{ value: number }>("getBalance", [address]);
-    const balance = (bal?.value ?? 0) / 1e9;
+    if (bal == null) {
+      return { chain: "sol", address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: "Solana RPC unavailable. Try refreshing." };
+    }
+    const balance = (bal.value ?? 0) / 1e9;
     const sigs = await solRpc<Array<{ signature: string }>>(
       "getSignaturesForAddress",
       [address, { limit: 1 }],
@@ -475,7 +490,7 @@ async function solSummary(address: string): Promise<AddressSummary> {
     return {
       chain: "sol", address, balance,
       balanceFiat: price != null ? balance * price : null,
-      txCount: sigs?.length ? 1 : 0, // RPC doesn't expose total; placeholder
+      txCount: sigs?.length ? 1 : 0,
       supported: true,
     };
   } catch (e) {
