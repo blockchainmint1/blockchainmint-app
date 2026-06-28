@@ -25,23 +25,27 @@ export async function registerForPush(): Promise<void> {
     console.warn("[push] device registration failed", e);
   }
 
-  // Bail unless we're inside Capacitor.
+  // Bail unless we're inside Capacitor. Use a string-form dynamic import so
+  // the web build doesn't try to resolve modules that aren't installed yet.
   let cap: CapModule | null = null;
   try {
-    cap = (await import(/* @vite-ignore */ "@capacitor/core")) as unknown as CapModule;
+    const capImport = new Function("m", "return import(m)") as (m: string) => Promise<unknown>;
+    cap = (await capImport("@capacitor/core")) as CapModule;
   } catch {
     return; // web build, no Capacitor
   }
   if (!cap?.Capacitor?.isNativePlatform?.()) return;
 
-  let PushNotifications: {
+  type PushApi = {
     requestPermissions: () => Promise<{ receive: string }>;
     register: () => Promise<void>;
     addListener: (event: string, cb: (payload: { value?: string; error?: unknown }) => void) => Promise<unknown>;
   };
+  let PushNotifications: PushApi;
   try {
-    const mod = await import(/* @vite-ignore */ "@capacitor/push-notifications");
-    PushNotifications = (mod as { PushNotifications: typeof PushNotifications }).PushNotifications;
+    const capImport = new Function("m", "return import(m)") as (m: string) => Promise<unknown>;
+    const mod = await capImport("@capacitor/push-notifications");
+    PushNotifications = (mod as { PushNotifications: PushApi }).PushNotifications;
   } catch {
     console.warn("[push] @capacitor/push-notifications not installed");
     return;

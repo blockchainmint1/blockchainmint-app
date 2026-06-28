@@ -49,7 +49,14 @@ export const registerDevice = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const sb = await admin();
-    const row: Record<string, unknown> = {
+    type DeviceUpsert = {
+      device_id: string;
+      last_seen_at: string;
+      push_token?: string | null;
+      push_platform?: "ios" | "android" | "web" | null;
+      app_version?: string | null;
+    };
+    const row: DeviceUpsert = {
       device_id: data.device_id,
       last_seen_at: new Date().toISOString(),
     };
