@@ -22,11 +22,11 @@ type ShopItem = {
 } & ({ kind: "coin"; chain: ChainId } | { kind: "accessory" });
 
 const ITEMS: ShopItem[] = [
-  { kind: "coin", chain: "BTC", name: "Bitcoin Cold Storage Wallet", tagline: "Tamper-evident physical BTC wallet for true cold custody", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/bitcoin-cold-storage-wallet" },
-  { kind: "coin", chain: "ETH", name: "Ethereum Cold Storage Wallet", tagline: "Physical ETH wallet — your private key under hologram", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/ethereum-cold-storage-wallet" },
-  { kind: "coin", chain: "TXC", name: "TEXITcoin Cold Storage Wallet", tagline: "Sovereign-series TXC wallet — minted in the spirit of the Republic", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/texitcoin-cold-storage-wallet" },
-  { kind: "coin", chain: "DOGE", name: "Dogecoin Cold Storage Wallet", tagline: "Much wallet. Very cold. Such storage.", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/dogecoin-cold-storage-wallet" },
-  { kind: "coin", chain: "LTC", name: "Litecoin Cold Storage Wallet", tagline: "Secure your Litecoin with a tangible, high-quality cold storage solution.", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/litecoin-ltc-cold-storage-wallet" },
+  { kind: "coin", chain: "btc", name: "Bitcoin Cold Storage Wallet", tagline: "Tamper-evident physical BTC wallet for true cold custody", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/bitcoin-cold-storage-wallet" },
+  { kind: "coin", chain: "eth", name: "Ethereum Cold Storage Wallet", tagline: "Physical ETH wallet — your private key under hologram", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/ethereum-cold-storage-wallet" },
+  { kind: "coin", chain: "txc", name: "TEXITcoin Cold Storage Wallet", tagline: "Sovereign-series TXC wallet — minted in the spirit of the Republic", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/texitcoin-cold-storage-wallet" },
+  { kind: "coin", chain: "doge", name: "Dogecoin Cold Storage Wallet", tagline: "Much wallet. Very cold. Such storage.", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/dogecoin-cold-storage-wallet" },
+  { kind: "coin", chain: "ltc", name: "Litecoin Cold Storage Wallet", tagline: "Secure your Litecoin with a tangible, high-quality cold storage solution.", price: "$19.95", spec: ".999 fine copper", url: "https://blockchainmint.com/product/litecoin-ltc-cold-storage-wallet" },
   { kind: "accessory", name: "Nectar.Pay Mobile POS Terminal", tagline: "Accept crypto payments anywhere — secure, portable, user-friendly.", price: "$250", spec: "Accessory", url: "https://blockchainmint.com/product/nectar-pay-mobile-pos-terminal" },
 ];
 
