@@ -472,3 +472,118 @@ export const homePortfolio = createServerFn({ method: "GET" })
     const totalFiat = summaries.reduce((s, c) => s + (c.summary.balanceFiat ?? 0), 0);
     return { coins: summaries, totalFiat };
   });
+
+// ============================================================================
+// SWEEP support: UTXOs, fee rate, broadcast
+// ============================================================================
+
+const SweepChainSchema = z.enum(["btc", "ltc", "doge", "txc"] as const);
+type SweepChain = z.infer<typeof SweepChainSchema>;
+
+export type SweepUtxo = { txid: string; vout: number; value: number };
+
+async function esploraUtxos(base: string, address: string): Promise<SweepUtxo[]> {
+  const res = await fetch(`${base}/api/address/${address}/utxo`);
+  if (!res.ok) throw new Error(`UTXO fetch failed: ${res.status}`);
+  const j = (await res.json()) as Array<{ txid: string; vout: number; value: number; status?: { confirmed?: boolean } }>;
+  return j
+    .filter(u => u.status?.confirmed !== false)
+    .map(u => ({ txid: u.txid, vout: u.vout, value: u.value }));
+}
+
+async function blockchairUtxos(slug: string, address: string): Promise<SweepUtxo[]> {
+  const res = await fetch(`https://api.blockchair.com/${slug}/dashboards/address/${address}?limit=1000`);
+  if (!res.ok) throw new Error(`UTXO fetch failed: ${res.status}`);
+  const j = (await res.json()) as {
+    data?: Record<string, { utxo?: Array<{ transaction_hash: string; index: number; value: number; block_id?: number }> }>;
+  };
+  const row = j.data ? Object.values(j.data)[0] : undefined;
+  const utxos = row?.utxo ?? [];
+  // Block confirmed only (block_id > 0); blockchair uses -1 for mempool.
+  return utxos
+    .filter(u => (u.block_id ?? 0) > 0)
+    .map(u => ({ txid: u.transaction_hash, vout: u.index, value: u.value }));
+}
+
+async function esploraFeeRate(base: string): Promise<number> {
+  try {
+    const res = await fetch(`${base}/api/v1/fees/recommended`);
+    if (!res.ok) return 2;
+    const j = (await res.json()) as { halfHourFee?: number; hourFee?: number; fastestFee?: number };
+    return Math.max(1, Math.round(j.halfHourFee ?? j.hourFee ?? j.fastestFee ?? 2));
+  } catch { return 2; }
+}
+
+export const getSweepUtxos = createServerFn({ method: "POST" })
+  .inputValidator((input: { chain: SweepChain; address: string }) =>
+    z.object({ chain: SweepChainSchema, address: z.string().min(8).max(120) }).parse(input),
+  )
+  .handler(async ({ data }): Promise<{ utxos: SweepUtxo[]; feeRate: number }> => {
+    const { chain, address } = data;
+    if (chain === "btc") {
+      const [utxos, feeRate] = await Promise.all([
+        esploraUtxos("https://mempool.space", address),
+        esploraFeeRate("https://mempool.space"),
+      ]);
+      return { utxos, feeRate };
+    }
+    if (chain === "txc") {
+      const [utxos, feeRate] = await Promise.all([
+        esploraUtxos("https://mempool.texitcoin.org", address),
+        esploraFeeRate("https://mempool.texitcoin.org"),
+      ]);
+      return { utxos, feeRate };
+    }
+    if (chain === "ltc") {
+      // litecoinspace.org is Esplora-compatible.
+      const [utxos, feeRate] = await Promise.all([
+        esploraUtxos("https://litecoinspace.org", address).catch(() => blockchairUtxos("litecoin", address)),
+        esploraFeeRate("https://litecoinspace.org"),
+      ]);
+      return { utxos, feeRate };
+    }
+    // DOGE: blockchair only; relay min ~1000 sat/vB.
+    const utxos = await blockchairUtxos("dogecoin", address);
+    return { utxos, feeRate: 1000 };
+  });
+
+export const broadcastSweep = createServerFn({ method: "POST" })
+  .inputValidator((input: { chain: SweepChain; rawHex: string }) =>
+    z.object({
+      chain: SweepChainSchema,
+      rawHex: z.string().regex(/^[0-9a-fA-F]+$/).min(20).max(200_000),
+    }).parse(input),
+  )
+  .handler(async ({ data }): Promise<{ ok: true; txid: string } | { ok: false; error: string }> => {
+    const { chain, rawHex } = data;
+    try {
+      if (chain === "btc" || chain === "txc" || chain === "ltc") {
+        const base =
+          chain === "btc" ? "https://mempool.space" :
+          chain === "txc" ? "https://mempool.texitcoin.org" :
+                            "https://litecoinspace.org";
+        const res = await fetch(`${base}/api/tx`, {
+          method: "POST",
+          headers: { "content-type": "text/plain" },
+          body: rawHex,
+        });
+        const text = await res.text();
+        if (!res.ok) return { ok: false, error: text || `Broadcast failed (${res.status})` };
+        return { ok: true, txid: text.trim() };
+      }
+      // DOGE via Blockchair.
+      const res = await fetch("https://api.blockchair.com/dogecoin/push/transaction", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ data: rawHex }).toString(),
+      });
+      const j = (await res.json()) as { data?: { transaction_hash?: string }; context?: { error?: string } };
+      if (!res.ok || j.context?.error) return { ok: false, error: j.context?.error ?? `Broadcast failed (${res.status})` };
+      const txid = j.data?.transaction_hash;
+      if (!txid) return { ok: false, error: "Broadcast accepted but no txid returned." };
+      return { ok: true, txid };
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
+    }
+  });
+
