@@ -18,14 +18,18 @@ const ChainIdSchema = z.enum([
   "btc","eth","ltc","doge","bch","bsc","ada","sol","bnb","txc","iskander",
 ] as const);
 
-export type OmniToken = {
-  propertyId: number;
+export type Layer2Token = {
+  id: string;                // propertyId for Omni, contractAddress for ERC20
+  type: "omni" | "erc20";
   name: string;
   ticker?: string;
-  balance: number;     // human units
+  balance: number;             // human units
   reserved?: number;
   divisible?: boolean;
 };
+
+// Backwards-compat alias
+export type OmniToken = Layer2Token;
 
 export type AddressSummary = {
   chain: ChainId;
@@ -144,26 +148,27 @@ async function omniTokensForAddress(address: string): Promise<OmniToken[] | unde
   type Raw = Array<{ propertyid: number; balance: string; reserved?: string; frozen?: string }>;
   const balances = await txcRpc<Raw>("omni_getallbalancesforaddress", [address]);
   if (!balances || balances.length === 0) return undefined;
-  const out: OmniToken[] = [];
-  for (const b of balances) {
-    // Fetch property metadata for name/divisibility (best-effort)
-    const meta = await txcRpc<{ name?: string; ticker?: string; divisible?: boolean }>(
-      "omni_getproperty", [b.propertyid],
-    );
-    const divisible = meta?.divisible !== false;
-    // Omni returns balances as decimal strings already in human units for
-    // divisible properties; indivisible properties are integer strings.
-    const bal = divisible ? Number(b.balance) : Number(b.balance);
-    out.push({
-      propertyId: b.propertyid,
-      name: meta?.name ?? `Property ${b.propertyid}`,
-      ticker: meta?.ticker,
-      balance: bal,
-      reserved: b.reserved ? Number(b.reserved) : undefined,
-      divisible,
-    });
-  }
-  return out;
+    const out: Layer2Token[] = [];
+    for (const b of balances) {
+      // Fetch property metadata for name/divisibility (best-effort)
+      const meta = await txcRpc<{ name?: string; ticker?: string; divisible?: boolean }>(
+        "omni_getproperty", [b.propertyid],
+      );
+      const divisible = meta?.divisible !== false;
+      // Omni returns balances as decimal strings already in human units for
+      // divisible properties; indivisible properties are integer strings.
+      const bal = divisible ? Number(b.balance) : Number(b.balance);
+      out.push({
+        id: String(b.propertyid),
+        type: "omni",
+        name: meta?.name ?? `Property ${b.propertyid}`,
+        ticker: meta?.ticker,
+        balance: bal,
+        reserved: b.reserved ? Number(b.reserved) : undefined,
+        divisible,
+      });
+    }
+    return out;
 }
 
 // ---------- ETH via Alchemy ------------------------------------------------
@@ -177,16 +182,17 @@ async function ethSummary(address: string): Promise<AddressSummary> {
   const url = alchemyEthUrl();
   if (!url) return { chain: "eth", address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: "ETH provider not configured" };
   try {
-    const [balRes, countRes] = await Promise.all([
+    const [balRes, countRes, tokens] = await Promise.all([
       fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [address, "latest"] }) }),
       fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "eth_getTransactionCount", params: [address, "latest"] }) }),
+      ethTokens(address),
     ]);
     const bal = (await balRes.json()) as { result?: string };
     const cnt = (await countRes.json()) as { result?: string };
     const balance = Number(BigInt(bal.result ?? "0x0")) / 1e18;
     const txCount = cnt.result ? parseInt(cnt.result, 16) : 0;
     const price = await getPrice("eth");
-    return { chain: "eth", address, balance, balanceFiat: price != null ? balance * price : null, txCount, supported: true };
+    return { chain: "eth", address, balance, balanceFiat: price != null ? balance * price : null, txCount, supported: true, tokens };
   } catch (e) {
     return { chain: "eth", address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: (e as Error).message };
   }
@@ -237,6 +243,56 @@ async function ethHistory(address: string): Promise<TxRecord[]> {
     txs.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
     return txs.slice(0, 25);
   } catch { return []; }
+}
+
+async function ethTokens(address: string): Promise<Layer2Token[] | undefined> {
+  const url = alchemyEthUrl();
+  if (!url) return undefined;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "alchemy_getTokenBalances",
+        params: [address, "erc20"],
+      }),
+    });
+    const j = (await res.json()) as {
+      result?: { tokenBalances?: Array<{ contractAddress: string; tokenBalance: string }> };
+    };
+    const balances = j.result?.tokenBalances ?? [];
+    const out: Layer2Token[] = [];
+    for (const b of balances) {
+      const balanceHex = b.tokenBalance;
+      if (!balanceHex || balanceHex === "0x" || BigInt(balanceHex) === 0n) continue;
+      const metaRes = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "alchemy_getTokenMetadata",
+          params: [b.contractAddress],
+        }),
+      });
+      const meta = (await metaRes.json()) as {
+        result?: { name?: string; symbol?: string; decimals?: number; logo?: string };
+      };
+      const decimals = meta.result?.decimals ?? 18;
+      const balance = Number(BigInt(balanceHex) / BigInt(10 ** Math.max(0, decimals - 8))) / 1e8;
+      out.push({
+        id: b.contractAddress,
+        type: "erc20",
+        name: meta.result?.name ?? `ERC-20 ${b.contractAddress.slice(0, 6)}…`,
+        ticker: meta.result?.symbol,
+        balance,
+        divisible: true,
+      });
+    }
+    return out.length > 0 ? out : undefined;
+  } catch { return undefined; }
 }
 
 // ---------- Blockchair (LTC, DOGE, BCH) ------------------------------------
