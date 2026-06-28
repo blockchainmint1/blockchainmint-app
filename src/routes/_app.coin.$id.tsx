@@ -68,6 +68,7 @@ function CoinPage() {
 
   function handleRemove() {
     if (!confirm("Remove this coin from your portfolio? The coin itself is unaffected — only its watch entry is deleted.")) return;
+    if (coin) clearCachedHistory(coin.chain, coin.address);
     removeLocalCoin(id);
     toast.success("Coin removed.");
     navigate({ to: "/home" });
