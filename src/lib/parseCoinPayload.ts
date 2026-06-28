@@ -47,6 +47,8 @@ export function detectChain(addr: string): { chain: ChainId; address: string } |
   if (/^(bc1|tb1)[a-z0-9]{20,87}$/i.test(a) || /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(a)) return { chain: "btc", address: a };
   if (/^(ltc1)[a-z0-9]{20,87}$/i.test(a) || /^[LM3][a-km-zA-HJ-NP-Z1-9]{26,33}$/.test(a)) return { chain: "ltc", address: a };
   if (/^D[5-9A-HJ-NP-U][a-km-zA-HJ-NP-Z1-9]{32}$/.test(a)) return { chain: "doge", address: a };
+  // TXC: bech32 (txc1…) and legacy base58 (T…)
+  if (/^txc1[a-z0-9]{20,87}$/i.test(a)) return { chain: "txc", address: a };
   if (/^T[a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(a)) return { chain: "txc", address: a };
   return null;
 }

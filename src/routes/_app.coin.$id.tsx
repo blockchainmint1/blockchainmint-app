@@ -94,6 +94,23 @@ function CoinPage() {
 
       <ReceiveBlock address={coin.address} explorerUrl={ch.explorer(coin.address)} />
 
+      {summary?.tokens && summary.tokens.length > 0 && (
+        <div className="mt-6">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Layer-2 tokens</p>
+          <ul className="mt-2 space-y-2">
+            {summary.tokens.map(t => (
+              <li key={t.propertyId} className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate font-serif text-sm text-foreground">{t.name}</p>
+                  <p className="font-mono text-[10px] text-muted-foreground">#{t.propertyId}{t.ticker ? ` · ${t.ticker}` : ""}</p>
+                </div>
+                <p className="num font-mono text-sm text-foreground">{fmtAmount(t.balance, 8, 6)}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="mt-4 grid grid-cols-2 gap-2">
         <Link
           to="/verify/$chain/$address" params={{ chain: coin.chain, address: coin.address }}
