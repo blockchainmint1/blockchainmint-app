@@ -241,6 +241,9 @@ async function ethHistory(address: string): Promise<TxRecord[]> {
     }
     txs.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
     return txs.slice(0, 25);
+  } catch { return []; }
+}
+
 async function ethTokens(address: string): Promise<Layer2Token[] | undefined> {
   const url = alchemyEthUrl();
   if (!url) return undefined;
