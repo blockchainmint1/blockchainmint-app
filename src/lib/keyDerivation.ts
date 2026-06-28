@@ -36,11 +36,11 @@ const BTC_PARAMS: Record<"btc" | "ltc" | "doge" | "bch" | "txc", BtcLikeParams> 
   ltc:  { wifVersion: 0xb0, p2pkhVersion: 0x30, p2shVersion: 0x32, bech32Hrp: "ltc" },
   doge: { wifVersion: 0x9e, p2pkhVersion: 0x1e, p2shVersion: 0x16, bech32Hrp: null  },
   bch:  { wifVersion: 0x80, p2pkhVersion: 0x00, p2shVersion: 0x05, bech32Hrp: null  },
-  // TEXITcoin — Bitcoin-derived fork. Final params live at texitcoin.org/build;
-  // see chainparams.cpp in the TEXITcoin core source. If the WIF version differs
-  // from what we have here, the parser falls back through every known prefix
-  // anyway, so a "From" verification can still succeed.
-  txc:  { wifVersion: 0xc1, p2pkhVersion: 0x41, p2shVersion: 0x05, bech32Hrp: "txc" },
+  // TEXITcoin — Bitcoin-derived fork. Params from chainparams.cpp in
+  // blockchainmint1/texitcoin (mainnet): PUBKEY_ADDRESS=66 (0x42, "T…"),
+  // SCRIPT_ADDRESS=5 (0x05), SECRET_KEY=193 (0xC1), bech32 hrp = "txc".
+  // SCRIPT_ADDRESS2=65 (0x41) also exists as an alternate P2SH prefix.
+  txc:  { wifVersion: 0xc1, p2pkhVersion: 0x42, p2shVersion: 0x05, bech32Hrp: "txc" },
 };
 
 const ALL_WIF_PREFIXES = Array.from(new Set(Object.values(BTC_PARAMS).map(p => p.wifVersion)));
