@@ -94,19 +94,6 @@ function HomePage() {
       onTouchEnd={onTouchEnd}
       style={{ transform: pull ? `translateY(${pull}px)` : undefined, transition: pull ? "none" : "transform 200ms ease" }}
     >
-      {(pull > 0 || isFetching) && (
-        <div
-          className="pointer-events-none absolute left-0 right-0 flex justify-center"
-          style={{ top: 8 - (isFetching ? 0 : Math.max(0, 40 - pull)) }}
-        >
-          <div className="rounded-full border border-border bg-card p-2 shadow-sm">
-            <RefreshCw
-              className={`size-4 text-primary ${isFetching ? "animate-spin" : ""}`}
-              style={!isFetching ? { transform: `rotate(${pull * 4}deg)` } : undefined}
-            />
-          </div>
-        </div>
-      )}
 
       <header className="mb-8">
         <div className="mb-2 flex items-center justify-between">
