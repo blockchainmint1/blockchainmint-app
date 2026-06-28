@@ -68,6 +68,17 @@ function ScanPage() {
     navigate({ to: "/verify/$chain/$address", params: { chain: scanned.chain, address: scanned.address } });
   }
 
+  useEffect(() => {
+    if (!scanned || !showQr) { setQrDataUrl(null); return; }
+    let cancelled = false;
+    QRCode.toDataURL(scanned.address, { margin: 1, width: 320, color: { dark: "#000000", light: "#ffffff" } })
+      .then(url => { if (!cancelled) setQrDataUrl(url); })
+      .catch(() => { if (!cancelled) setQrDataUrl(null); });
+    return () => { cancelled = true; };
+  }, [scanned, showQr]);
+
+
+
   return (
     <div className="px-5 pt-10">
       <header className="mb-6">
