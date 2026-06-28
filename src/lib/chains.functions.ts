@@ -295,7 +295,11 @@ async function ethTokens(address: string): Promise<Layer2Token[] | undefined> {
   } catch { return undefined; }
 }
 
-// ---------- Blockchair (LTC, DOGE, BCH) ------------------------------------
+// ---------- LTC / DOGE / BCH (multi-provider, free-tier) -------------------
+//
+// Blockchair's free tier rate-limits aggressively (HTTP 200 with
+// `data: null` and a 430 error in the context envelope), so we hit
+// dedicated explorers first and fall back to Blockchair only on failure.
 
 const BLOCKCHAIR_SLUG: Partial<Record<ChainId, string>> = {
   ltc: "litecoin",
@@ -303,27 +307,76 @@ const BLOCKCHAIR_SLUG: Partial<Record<ChainId, string>> = {
   bch: "bitcoin-cash",
 };
 
-async function blockchairSummary(chain: ChainId, address: string): Promise<AddressSummary> {
+type BalanceRow = { balance: number; txCount: number };
+
+async function ltcLitecoinspace(address: string): Promise<BalanceRow | null> {
+  try {
+    const res = await fetch(`https://litecoinspace.org/api/address/${address}`);
+    if (!res.ok) return null;
+    const j = (await res.json()) as {
+      chain_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
+      mempool_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
+    };
+    const sats =
+      j.chain_stats.funded_txo_sum - j.chain_stats.spent_txo_sum +
+      j.mempool_stats.funded_txo_sum - j.mempool_stats.spent_txo_sum;
+    return { balance: sats / 1e8, txCount: j.chain_stats.tx_count + j.mempool_stats.tx_count };
+  } catch { return null; }
+}
+
+async function blockcypherBalance(coin: "ltc" | "doge", address: string): Promise<BalanceRow | null> {
+  try {
+    const res = await fetch(`https://api.blockcypher.com/v1/${coin}/main/addrs/${address}/balance`);
+    if (!res.ok) return null;
+    const j = (await res.json()) as { final_balance?: number; final_n_tx?: number; error?: string };
+    if (j.error) return null;
+    return { balance: (j.final_balance ?? 0) / 1e8, txCount: j.final_n_tx ?? 0 };
+  } catch { return null; }
+}
+
+async function haskoinBchBalance(address: string): Promise<BalanceRow | null> {
+  try {
+    const res = await fetch(`https://api.haskoin.com/bch/address/${address}/balance`);
+    if (!res.ok) return null;
+    const j = (await res.json()) as { confirmed?: number; unconfirmed?: number; txs?: number };
+    const sats = (j.confirmed ?? 0) + (j.unconfirmed ?? 0);
+    return { balance: sats / 1e8, txCount: j.txs ?? 0 };
+  } catch { return null; }
+}
+
+async function blockchairBalance(chain: ChainId, address: string): Promise<BalanceRow | null> {
   const slug = BLOCKCHAIR_SLUG[chain];
-  if (!slug) return { chain, address, balance: 0, balanceFiat: null, txCount: 0, supported: false };
+  if (!slug) return null;
   try {
     const res = await fetch(`https://api.blockchair.com/${slug}/dashboards/address/${address}?limit=0`);
-    if (!res.ok) throw new Error(`${chain} ${res.status}`);
+    if (!res.ok) return null;
     const j = (await res.json()) as {
-      data?: Record<string, { address?: { balance?: number; transaction_count?: number } }>;
+      data?: Record<string, { address?: { balance?: number; transaction_count?: number } }> | null;
     };
-    const row = j.data ? Object.values(j.data)[0] : undefined;
-    const balance = (row?.address?.balance ?? 0) / 1e8;
-    const price = await getPrice(chain);
+    if (!j.data) return null;
+    const row = Object.values(j.data)[0];
     return {
-      chain, address, balance,
-      balanceFiat: price != null ? balance * price : null,
+      balance: (row?.address?.balance ?? 0) / 1e8,
       txCount: row?.address?.transaction_count ?? 0,
-      supported: true,
     };
-  } catch (e) {
-    return { chain, address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: (e as Error).message };
+  } catch { return null; }
+}
+
+async function blockchairSummary(chain: ChainId, address: string): Promise<AddressSummary> {
+  let row: BalanceRow | null = null;
+  if (chain === "ltc") row = await ltcLitecoinspace(address) ?? await blockcypherBalance("ltc", address);
+  else if (chain === "doge") row = await blockcypherBalance("doge", address);
+  else if (chain === "bch") row = await haskoinBchBalance(address);
+  if (!row) row = await blockchairBalance(chain, address);
+  if (!row) {
+    return { chain, address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: "Explorer unavailable. Try again in a moment." };
   }
+  const price = await getPrice(chain);
+  return {
+    chain, address, balance: row.balance,
+    balanceFiat: price != null ? row.balance * price : null,
+    txCount: row.txCount, supported: true,
+  };
 }
 
 async function blockchairHistory(chain: ChainId, address: string): Promise<TxRecord[]> {
@@ -333,9 +386,10 @@ async function blockchairHistory(chain: ChainId, address: string): Promise<TxRec
     const res = await fetch(`https://api.blockchair.com/${slug}/dashboards/address/${address}?limit=25`);
     if (!res.ok) return [];
     const j = (await res.json()) as {
-      data?: Record<string, { transactions?: string[] }>;
+      data?: Record<string, { transactions?: string[] }> | null;
     };
-    const row = j.data ? Object.values(j.data)[0] : undefined;
+    if (!j.data) return [];
+    const row = Object.values(j.data)[0];
     const hashes = row?.transactions ?? [];
     return hashes.slice(0, 25).map(h => ({
       hash: h, direction: "in" as const, amount: 0, fee: null, timestamp: null,
@@ -343,6 +397,7 @@ async function blockchairHistory(chain: ChainId, address: string): Promise<TxRec
     }));
   } catch { return []; }
 }
+
 
 // ---------- Cardano via Koios (no API key required) ------------------------
 
