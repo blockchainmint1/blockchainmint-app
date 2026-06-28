@@ -587,3 +587,114 @@ export const broadcastSweep = createServerFn({ method: "POST" })
     }
   });
 
+// ============================================================================
+// ETH sweep support: nonce, balance, fees, ERC-20 metadata, broadcast
+// ============================================================================
+
+export type EthSweepToken = {
+  contractAddress: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  /** raw integer balance, decimal string */
+  balanceRaw: string;
+};
+
+export type EthSweepContext = {
+  chainId: number;
+  nonce: number;
+  /** wei, hex */
+  balanceWei: string;
+  /** wei per gas, hex */
+  maxFeePerGas: string;
+  maxPriorityFeePerGas: string;
+  tokens: EthSweepToken[];
+};
+
+async function alchemyRpc<T>(method: string, params: unknown[]): Promise<T> {
+  const url = alchemyEthUrl();
+  if (!url) throw new Error("ETH provider not configured (ALCHEMY_API missing).");
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  const j = (await res.json()) as { result?: T; error?: { message?: string } };
+  if (j.error) throw new Error(j.error.message ?? "RPC error");
+  return j.result as T;
+}
+
+export const getEthSweepContext = createServerFn({ method: "POST" })
+  .inputValidator((input: { address: string }) =>
+    z.object({ address: z.string().regex(/^0x[0-9a-fA-F]{40}$/) }).parse(input),
+  )
+  .handler(async ({ data }): Promise<EthSweepContext> => {
+    const addr = data.address;
+    const [balHex, nonceHex, feeHist, tokensRaw] = await Promise.all([
+      alchemyRpc<string>("eth_getBalance", [addr, "latest"]),
+      alchemyRpc<string>("eth_getTransactionCount", [addr, "pending"]),
+      alchemyRpc<{ baseFeePerGas: string[]; reward?: string[][] }>(
+        "eth_feeHistory", ["0x5", "latest", [50]],
+      ),
+      alchemyRpc<{ tokenBalances?: Array<{ contractAddress: string; tokenBalance: string }> }>(
+        "alchemy_getTokenBalances", [addr, "erc20"],
+      ),
+    ]);
+
+    // Fee: base fee (latest pending block) + priority tip from history p50.
+    const baseFees = feeHist.baseFeePerGas ?? [];
+    const nextBase = BigInt(baseFees[baseFees.length - 1] ?? "0x0");
+    const tips = (feeHist.reward ?? []).map(r => BigInt(r[0] ?? "0x0")).filter(x => x > 0n);
+    const tipMedian = tips.length
+      ? tips.sort((a, b) => (a < b ? -1 : 1))[Math.floor(tips.length / 2)]
+      : 1_000_000_000n; // 1 gwei fallback
+    const maxPriorityFeePerGas = tipMedian;
+    // headroom: 2x base + tip
+    const maxFeePerGas = nextBase * 2n + maxPriorityFeePerGas;
+
+    // Token metadata for non-zero balances
+    const balances = (tokensRaw.tokenBalances ?? []).filter(
+      b => b.tokenBalance && b.tokenBalance !== "0x" && BigInt(b.tokenBalance) > 0n,
+    );
+    const tokens: EthSweepToken[] = [];
+    for (const b of balances) {
+      try {
+        const meta = await alchemyRpc<{ name?: string; symbol?: string; decimals?: number }>(
+          "alchemy_getTokenMetadata", [b.contractAddress],
+        );
+        tokens.push({
+          contractAddress: b.contractAddress,
+          name: meta.name ?? "Unknown token",
+          symbol: meta.symbol ?? "?",
+          decimals: meta.decimals ?? 18,
+          balanceRaw: BigInt(b.tokenBalance).toString(),
+        });
+      } catch { /* skip token if metadata fails */ }
+    }
+
+    return {
+      chainId: 1,
+      nonce: parseInt(nonceHex, 16),
+      balanceWei: "0x" + BigInt(balHex).toString(16),
+      maxFeePerGas: "0x" + maxFeePerGas.toString(16),
+      maxPriorityFeePerGas: "0x" + maxPriorityFeePerGas.toString(16),
+      tokens,
+    };
+  });
+
+export const broadcastEthSweep = createServerFn({ method: "POST" })
+  .inputValidator((input: { rawHex: string }) =>
+    z.object({
+      rawHex: z.string().regex(/^0x[0-9a-fA-F]+$/).min(20).max(200_000),
+    }).parse(input),
+  )
+  .handler(async ({ data }): Promise<{ ok: true; txid: string } | { ok: false; error: string }> => {
+    try {
+      const hash = await alchemyRpc<string>("eth_sendRawTransaction", [data.rawHex]);
+      return { ok: true, txid: hash };
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
+    }
+  });
+
+
