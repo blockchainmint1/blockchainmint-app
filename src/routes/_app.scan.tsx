@@ -1,14 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { verifyMintRecord } from "@/lib/chains.functions";
 import { CHAIN_OPTIONS, CHAINS, type ChainId } from "@/lib/chains";
-import { ShieldCheck, Coins, Keyboard } from "lucide-react";
+import { ShieldCheck, Coins, Keyboard, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { QrScanner } from "@/components/QrScanner";
 import { parseCoinPayload, detectChain } from "@/lib/parseCoinPayload";
 import { addLocalCoin } from "@/lib/localPortfolio";
+import { CoinLogo } from "@/components/CoinLogo";
+import QRCode from "qrcode";
 
 export const Route = createFileRoute("/_app/scan")({
   head: () => ({ meta: [{ title: "Scan — Blockchain Mint" }] }),
@@ -22,6 +24,8 @@ function ScanPage() {
   const [chain, setChain] = useState<ChainId>("btc");
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
+  const [showQr, setShowQr] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   const verifyFn = useServerFn(verifyMintRecord);
 
@@ -64,6 +68,17 @@ function ScanPage() {
     navigate({ to: "/verify/$chain/$address", params: { chain: scanned.chain, address: scanned.address } });
   }
 
+  useEffect(() => {
+    if (!scanned || !showQr) { setQrDataUrl(null); return; }
+    let cancelled = false;
+    QRCode.toDataURL(scanned.address, { margin: 1, width: 320, color: { dark: "#000000", light: "#ffffff" } })
+      .then(url => { if (!cancelled) setQrDataUrl(url); })
+      .catch(() => { if (!cancelled) setQrDataUrl(null); });
+    return () => { cancelled = true; };
+  }, [scanned, showQr]);
+
+
+
   return (
     <div className="px-5 pt-10">
       <header className="mb-6">
@@ -77,10 +92,28 @@ function ScanPage() {
 
           {scanned && (
             <div className="mt-4 rounded-xl border border-primary/40 bg-primary/5 p-4">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-primary">
-                Detected {CHAINS[scanned.chain].name}
-              </p>
-              <p className="mt-1 break-all font-mono text-xs text-foreground">{scanned.address}</p>
+              <div className="flex items-center gap-3">
+                <CoinLogo chain={scanned.chain} size={40} />
+                <div className="min-w-0">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-primary">
+                    Detected {CHAINS[scanned.chain].name}
+                  </p>
+                  <p className="mt-0.5 break-all font-mono text-xs text-foreground">{scanned.address}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowQr(v => !v)}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                <QrCode className="size-3.5" /> {showQr ? "Hide QR code" : "Show QR code"}
+              </button>
+              {showQr && qrDataUrl && (
+                <div className="mt-3 flex justify-center rounded-lg bg-white p-3">
+                  <img src={qrDataUrl} alt="Address QR code" className="size-56" />
+                </div>
+              )}
+
               <input
                 type="text" value={label} onChange={e => setLabel(e.target.value)}
                 placeholder="Label (optional) — e.g. 'Birthday 2024'"
@@ -101,7 +134,7 @@ function ScanPage() {
                 </button>
               </div>
               <button
-                onClick={() => { setScanned(null); setAddress(""); setLabel(""); }}
+                onClick={() => { setScanned(null); setAddress(""); setLabel(""); setShowQr(false); }}
                 className="mt-2 w-full text-center text-[11px] text-muted-foreground hover:text-foreground"
               >
                 Scan a different coin
