@@ -40,7 +40,7 @@ export function TokenList({ tokens, chain }: { tokens: OmniToken[]; chain: strin
           const color = tokenColor(t.name);
           return (
             <li
-              key={t.propertyId}
+              key={t.id}
               className="group flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/40 px-3 py-2.5 transition hover:border-primary/30 hover:bg-secondary/70"
             >
               <div
@@ -53,11 +53,12 @@ export function TokenList({ tokens, chain }: { tokens: OmniToken[]; chain: strin
               <div className="min-w-0 flex-1">
                 <p className="truncate font-serif text-sm text-foreground">{t.name}</p>
                 <p className="font-mono text-[10px] text-muted-foreground">
-                  {t.ticker ? `${t.ticker} · ` : ""}#{t.propertyId}
+                  {t.ticker ? `${t.ticker} · ` : ""}
+                  {t.type === "omni" ? `#${t.id}` : `${t.id.slice(0, 6)}…${t.id.slice(-4)}`}
                 </p>
               </div>
               <p className="num shrink-0 font-mono text-sm text-foreground">
-                {fmtAmount(t.balance, 8, 6)}
+                {fmtAmount(t.balance, t.divisible ? 8 : 0, 6)}
               </p>
             </li>
           );
