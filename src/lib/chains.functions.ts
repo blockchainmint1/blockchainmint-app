@@ -543,10 +543,16 @@ export const getSweepUtxos = createServerFn({ method: "POST" })
       ]);
       return { utxos, feeRate };
     }
-    // DOGE: blockchair only; relay min ~1000 sat/vB.
-    const utxos = await blockchairUtxos("dogecoin", address);
-    return { utxos, feeRate: 1000 };
+    if (chain === "doge") {
+      // DOGE: blockchair only; relay min ~1000 sat/vB.
+      const utxos = await blockchairUtxos("dogecoin", address);
+      return { utxos, feeRate: 1000 };
+    }
+    // BCH: blockchair only. Network fee target ~1 sat/vB.
+    const utxos = await blockchairUtxos("bitcoin-cash", address);
+    return { utxos, feeRate: 1 };
   });
+
 
 export const broadcastSweep = createServerFn({ method: "POST" })
   .inputValidator((input: { chain: SweepChain; rawHex: string }) =>
