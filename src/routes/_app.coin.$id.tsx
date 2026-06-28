@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, ShieldCheck
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { getLocalCoin, removeLocalCoin, type LocalCoin } from "@/lib/localPortfolio";
-import { cacheCoinHistory, getCachedHistory } from "@/lib/localHistory";
+import { cacheCoinHistory, clearCachedHistory, getCachedHistory } from "@/lib/localHistory";
 
 export const Route = createFileRoute("/_app/coin/$id")({
   head: () => ({ meta: [{ title: "Coin — Blockchain Mint" }] }),
