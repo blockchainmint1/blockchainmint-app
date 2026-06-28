@@ -56,6 +56,8 @@ export function detectChain(addr: string): { chain: ChainId; address: string } |
   if (/^T[a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(a)) return { chain: "txc", address: a };
   // Cardano Shelley (addr1…) and testnet (addr_test1…)
   if (/^addr1[a-z0-9]{50,}$/i.test(a) || /^addr_test1[a-z0-9]{50,}$/i.test(a)) return { chain: "ada", address: a };
+  // Solana base58 public key (32 bytes ≈ 43–44 chars)
+  if (/^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(a)) return { chain: "sol", address: a };
   return null;
 }
 
