@@ -20,6 +20,7 @@ import { Route as AppSweepRouteImport } from './routes/_app.sweep'
 import { Route as AppShopRouteImport } from './routes/_app.shop'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppScanRouteImport } from './routes/_app.scan'
+import { Route as AppImportRouteImport } from './routes/_app.import'
 import { Route as AppHomeRouteImport } from './routes/_app.home'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as AppCoinIdRouteImport } from './routes/_app.coin.$id'
@@ -80,6 +81,11 @@ const AppScanRoute = AppScanRouteImport.update({
   path: '/scan',
   getParentRoute: () => AppRoute,
 } as any)
+const AppImportRoute = AppImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppHomeRoute = AppHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/alerts': typeof AppAlertsRoute
   '/home': typeof AppHomeRoute
+  '/import': typeof AppImportRoute
   '/scan': typeof AppScanRoute
   '/settings': typeof AppSettingsRoute
   '/shop': typeof AppShopRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/alerts': typeof AppAlertsRoute
   '/home': typeof AppHomeRoute
+  '/import': typeof AppImportRoute
   '/scan': typeof AppScanRoute
   '/settings': typeof AppSettingsRoute
   '/shop': typeof AppShopRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_app/alerts': typeof AppAlertsRoute
   '/_app/home': typeof AppHomeRoute
+  '/_app/import': typeof AppImportRoute
   '/_app/scan': typeof AppScanRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/shop': typeof AppShopRoute
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/alerts'
     | '/home'
+    | '/import'
     | '/scan'
     | '/settings'
     | '/shop'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/alerts'
     | '/home'
+    | '/import'
     | '/scan'
     | '/settings'
     | '/shop'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_app/alerts'
     | '/_app/home'
+    | '/_app/import'
     | '/_app/scan'
     | '/_app/settings'
     | '/_app/shop'
@@ -304,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppScanRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/import': {
+      id: '/_app/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof AppImportRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/home': {
       id: '/_app/home'
       path: '/home'
@@ -345,6 +364,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAlertsRoute: typeof AppAlertsRoute
   AppHomeRoute: typeof AppHomeRoute
+  AppImportRoute: typeof AppImportRoute
   AppScanRoute: typeof AppScanRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppShopRoute: typeof AppShopRoute
@@ -356,6 +376,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAlertsRoute: AppAlertsRoute,
   AppHomeRoute: AppHomeRoute,
+  AppImportRoute: AppImportRoute,
   AppScanRoute: AppScanRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppShopRoute: AppShopRoute,
