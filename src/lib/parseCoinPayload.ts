@@ -50,6 +50,7 @@ export function detectChain(addr: string): { chain: ChainId; address: string } |
   // BCH: cashaddr (bitcoincash:q… or bare q…/p…) — try before generic legacy
   // since 1… is ambiguous with BTC.
   if (/^bitcoincash:[qp][qpzry9x8gf2tvdw0s3jn54khce6mua7l]+$/i.test(a)) return { chain: "bch", address: a };
+  if (/^[qp][qpzry9x8gf2tvdw0s3jn54khce6mua7l]{41,}$/.test(a)) return { chain: "bch", address: `bitcoincash:${a}` };
   // TXC: bech32 (txc1…) and legacy base58 (T…)
   if (/^txc1[a-z0-9]{20,87}$/i.test(a)) return { chain: "txc", address: a };
   if (/^T[a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(a)) return { chain: "txc", address: a };
