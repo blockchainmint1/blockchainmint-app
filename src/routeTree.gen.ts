@@ -22,7 +22,6 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppScanRouteImport } from './routes/_app.scan'
 import { Route as AppHomeRouteImport } from './routes/_app.home'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
-import { Route as AppShopSlugRouteImport } from './routes/_app.shop.$slug'
 import { Route as AppCoinIdRouteImport } from './routes/_app.coin.$id'
 import { Route as AppVerifyChainAddressRouteImport } from './routes/_app.verify.$chain.$address'
 
@@ -90,11 +89,6 @@ const AppAlertsRoute = AppAlertsRouteImport.update({
   path: '/alerts',
   getParentRoute: () => AppRoute,
 } as any)
-const AppShopSlugRoute = AppShopSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => AppShopRoute,
-} as any)
 const AppCoinIdRoute = AppCoinIdRouteImport.update({
   id: '/coin/$id',
   path: '/coin/$id',
@@ -117,10 +111,9 @@ export interface FileRoutesByFullPath {
   '/home': typeof AppHomeRoute
   '/scan': typeof AppScanRoute
   '/settings': typeof AppSettingsRoute
-  '/shop': typeof AppShopRouteWithChildren
+  '/shop': typeof AppShopRoute
   '/sweep': typeof AppSweepRoute
   '/coin/$id': typeof AppCoinIdRoute
-  '/shop/$slug': typeof AppShopSlugRoute
   '/verify/$chain/$address': typeof AppVerifyChainAddressRoute
 }
 export interface FileRoutesByTo {
@@ -134,10 +127,9 @@ export interface FileRoutesByTo {
   '/home': typeof AppHomeRoute
   '/scan': typeof AppScanRoute
   '/settings': typeof AppSettingsRoute
-  '/shop': typeof AppShopRouteWithChildren
+  '/shop': typeof AppShopRoute
   '/sweep': typeof AppSweepRoute
   '/coin/$id': typeof AppCoinIdRoute
-  '/shop/$slug': typeof AppShopSlugRoute
   '/verify/$chain/$address': typeof AppVerifyChainAddressRoute
 }
 export interface FileRoutesById {
@@ -153,10 +145,9 @@ export interface FileRoutesById {
   '/_app/home': typeof AppHomeRoute
   '/_app/scan': typeof AppScanRoute
   '/_app/settings': typeof AppSettingsRoute
-  '/_app/shop': typeof AppShopRouteWithChildren
+  '/_app/shop': typeof AppShopRoute
   '/_app/sweep': typeof AppSweepRoute
   '/_app/coin/$id': typeof AppCoinIdRoute
-  '/_app/shop/$slug': typeof AppShopSlugRoute
   '/_app/verify/$chain/$address': typeof AppVerifyChainAddressRoute
 }
 export interface FileRouteTypes {
@@ -175,7 +166,6 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sweep'
     | '/coin/$id'
-    | '/shop/$slug'
     | '/verify/$chain/$address'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -192,7 +182,6 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sweep'
     | '/coin/$id'
-    | '/shop/$slug'
     | '/verify/$chain/$address'
   id:
     | '__root__'
@@ -210,7 +199,6 @@ export interface FileRouteTypes {
     | '/_app/shop'
     | '/_app/sweep'
     | '/_app/coin/$id'
-    | '/_app/shop/$slug'
     | '/_app/verify/$chain/$address'
   fileRoutesById: FileRoutesById
 }
@@ -317,13 +305,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAlertsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/shop/$slug': {
-      id: '/_app/shop/$slug'
-      path: '/$slug'
-      fullPath: '/shop/$slug'
-      preLoaderRoute: typeof AppShopSlugRouteImport
-      parentRoute: typeof AppShopRoute
-    }
     '/_app/coin/$id': {
       id: '/_app/coin/$id'
       path: '/coin/$id'
@@ -341,23 +322,12 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AppShopRouteChildren {
-  AppShopSlugRoute: typeof AppShopSlugRoute
-}
-
-const AppShopRouteChildren: AppShopRouteChildren = {
-  AppShopSlugRoute: AppShopSlugRoute,
-}
-
-const AppShopRouteWithChildren =
-  AppShopRoute._addFileChildren(AppShopRouteChildren)
-
 interface AppRouteChildren {
   AppAlertsRoute: typeof AppAlertsRoute
   AppHomeRoute: typeof AppHomeRoute
   AppScanRoute: typeof AppScanRoute
   AppSettingsRoute: typeof AppSettingsRoute
-  AppShopRoute: typeof AppShopRouteWithChildren
+  AppShopRoute: typeof AppShopRoute
   AppSweepRoute: typeof AppSweepRoute
   AppCoinIdRoute: typeof AppCoinIdRoute
   AppVerifyChainAddressRoute: typeof AppVerifyChainAddressRoute
@@ -368,7 +338,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppHomeRoute: AppHomeRoute,
   AppScanRoute: AppScanRoute,
   AppSettingsRoute: AppSettingsRoute,
-  AppShopRoute: AppShopRouteWithChildren,
+  AppShopRoute: AppShopRoute,
   AppSweepRoute: AppSweepRoute,
   AppCoinIdRoute: AppCoinIdRoute,
   AppVerifyChainAddressRoute: AppVerifyChainAddressRoute,
