@@ -38,6 +38,7 @@ export function QrScanner({ onResult, paused }: Props) {
   async function start() {
     setError(null);
     try {
+      const { Html5Qrcode } = await import("html5-qrcode");
       const scanner = new Html5Qrcode(containerId, { verbose: false });
       scannerRef.current = scanner;
       await scanner.start(
