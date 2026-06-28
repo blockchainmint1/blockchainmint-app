@@ -53,10 +53,11 @@ export function cacheCoinHistory(
       supported: true,
     },
     txs: existing?.txs ?? [],
-    fetchedAt: existing?.fetchedAt ?? 0,
-    ...patch,
     fetchedAt: Date.now(),
+    ...patch,
   };
+  // Always bump the fetched-at timestamp when we write.
+  next.fetchedAt = Date.now();
   store[chain] = { ...bucket, [address]: next };
   write(store);
   return next;
