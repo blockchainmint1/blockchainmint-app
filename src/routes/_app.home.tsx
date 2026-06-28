@@ -3,7 +3,7 @@ import { useQueries } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { lookupAddress } from "@/lib/chains.functions";
 import { CoinLogo } from "@/components/CoinLogo";
-import { CHAINS, cscId, fmtAmount, fmtUsd, type ChainId } from "@/lib/chains";
+import { CHAINS, cscId, fmtAmount, fmtUsd } from "@/lib/chains";
 import { ScanLine, Plus } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
 import { cacheCoinHistory, getCachedHistory } from "@/lib/localHistory";
