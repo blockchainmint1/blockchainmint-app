@@ -66,12 +66,37 @@ async function priceUsd(chain: ChainId): Promise<number | null> {
   }
 }
 
-// ---------- BTC via mempool.space -------------------------------------------
+// ---------- Esplora/mempool.space-compatible REST (BTC + TXC) ---------------
+//
+// mempool.texitcoin.org mirrors the mempool.space / Esplora REST spec
+// (see https://texitcoin.org/build#api), so the same shapes work for both.
 
-async function btcSummary(address: string): Promise<AddressSummary> {
+type EsploraConfig = {
+  chain: ChainId;
+  base: string;            // e.g. https://mempool.space
+  txUrl: (txid: string) => string;
+  priceKey: "btc" | null;  // CoinGecko id; null = no fiat lookup
+};
+
+const ESPLORA: Record<"btc" | "txc", EsploraConfig> = {
+  btc: {
+    chain: "btc",
+    base: "https://mempool.space",
+    txUrl: (txid) => `https://mempool.space/tx/${txid}`,
+    priceKey: "btc",
+  },
+  txc: {
+    chain: "txc",
+    base: "https://mempool.texitcoin.org",
+    txUrl: (txid) => `https://mempool.texitcoin.org/tx/${txid}`,
+    priceKey: null, // TXC isn't on CoinGecko yet — show native balance only
+  },
+};
+
+async function esploraSummary(cfg: EsploraConfig, address: string): Promise<AddressSummary> {
   try {
-    const res = await fetch(`https://mempool.space/api/address/${address}`);
-    if (!res.ok) throw new Error(`mempool ${res.status}`);
+    const res = await fetch(`${cfg.base}/api/address/${address}`);
+    if (!res.ok) throw new Error(`${cfg.chain} ${res.status}`);
     const j = (await res.json()) as {
       chain_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
       mempool_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
@@ -82,21 +107,21 @@ async function btcSummary(address: string): Promise<AddressSummary> {
       j.mempool_stats.funded_txo_sum -
       j.mempool_stats.spent_txo_sum;
     const balance = sats / 1e8;
-    const price = await priceUsd("btc");
+    const price = cfg.priceKey ? await priceUsd(cfg.priceKey) : null;
     return {
-      chain: "btc", address, balance,
+      chain: cfg.chain, address, balance,
       balanceFiat: price != null ? balance * price : null,
       txCount: j.chain_stats.tx_count + j.mempool_stats.tx_count,
       supported: true,
     };
   } catch (e) {
-    return { chain: "btc", address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: (e as Error).message };
+    return { chain: cfg.chain, address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: (e as Error).message };
   }
 }
 
-async function btcHistory(address: string): Promise<TxRecord[]> {
+async function esploraHistory(cfg: EsploraConfig, address: string): Promise<TxRecord[]> {
   try {
-    const res = await fetch(`https://mempool.space/api/address/${address}/txs`);
+    const res = await fetch(`${cfg.base}/api/address/${address}/txs`);
     if (!res.ok) return [];
     const txs = (await res.json()) as Array<{
       txid: string;
@@ -117,7 +142,7 @@ async function btcHistory(address: string): Promise<TxRecord[]> {
         fee: tx.fee / 1e8,
         timestamp: tx.status.block_time ?? null,
         confirmed: tx.status.confirmed,
-        url: CHAINS.btc.explorer(address) + "/tx/" + tx.txid,
+        url: cfg.txUrl(tx.txid),
       };
     });
   } catch {
@@ -186,22 +211,12 @@ async function ethHistory(address: string): Promise<TxRecord[]> {
   }
 }
 
-// ---------- TXC (no public explorer yet — return a friendly placeholder) ----
-
-function txcSummary(address: string): AddressSummary {
-  return {
-    chain: "txc", address, balance: 0, balanceFiat: null, txCount: 0,
-    supported: true,
-    error: "TEXITcoin live lookup launches with Phase 3 — the address is registered for alerts.",
-  };
-}
-
 // ---------- Dispatch --------------------------------------------------------
 
 async function summarize(chain: ChainId, address: string): Promise<AddressSummary> {
-  if (chain === "btc") return btcSummary(address);
+  if (chain === "btc") return esploraSummary(ESPLORA.btc, address);
+  if (chain === "txc") return esploraSummary(ESPLORA.txc, address);
   if (chain === "eth") return ethSummary(address);
-  if (chain === "txc") return txcSummary(address);
   return {
     chain, address, balance: 0, balanceFiat: null, txCount: 0,
     supported: false,
@@ -210,10 +225,12 @@ async function summarize(chain: ChainId, address: string): Promise<AddressSummar
 }
 
 async function history(chain: ChainId, address: string): Promise<TxRecord[]> {
-  if (chain === "btc") return btcHistory(address);
+  if (chain === "btc") return esploraHistory(ESPLORA.btc, address);
+  if (chain === "txc") return esploraHistory(ESPLORA.txc, address);
   if (chain === "eth") return ethHistory(address);
   return [];
 }
+
 
 // ============================================================================
 // PUBLIC server functions
