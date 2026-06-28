@@ -478,7 +478,10 @@ async function solRpc<T>(method: string, params: unknown[]): Promise<T | null> {
 async function solSummary(address: string): Promise<AddressSummary> {
   try {
     const bal = await solRpc<{ value: number }>("getBalance", [address]);
-    const balance = (bal?.value ?? 0) / 1e9;
+    if (bal == null) {
+      return { chain: "sol", address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: "Solana RPC unavailable. Try refreshing." };
+    }
+    const balance = (bal.value ?? 0) / 1e9;
     const sigs = await solRpc<Array<{ signature: string }>>(
       "getSignaturesForAddress",
       [address, { limit: 1 }],
@@ -487,7 +490,7 @@ async function solSummary(address: string): Promise<AddressSummary> {
     return {
       chain: "sol", address, balance,
       balanceFiat: price != null ? balance * price : null,
-      txCount: sigs?.length ? 1 : 0, // RPC doesn't expose total; placeholder
+      txCount: sigs?.length ? 1 : 0,
       supported: true,
     };
   } catch (e) {
