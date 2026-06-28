@@ -24,6 +24,8 @@ function ScanPage() {
   const [chain, setChain] = useState<ChainId>("btc");
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
+  const [showQr, setShowQr] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   const verifyFn = useServerFn(verifyMintRecord);
 
