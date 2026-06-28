@@ -182,16 +182,17 @@ async function ethSummary(address: string): Promise<AddressSummary> {
   const url = alchemyEthUrl();
   if (!url) return { chain: "eth", address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: "ETH provider not configured" };
   try {
-    const [balRes, countRes] = await Promise.all([
+    const [balRes, countRes, tokens] = await Promise.all([
       fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [address, "latest"] }) }),
       fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "eth_getTransactionCount", params: [address, "latest"] }) }),
+      ethTokens(address),
     ]);
     const bal = (await balRes.json()) as { result?: string };
     const cnt = (await countRes.json()) as { result?: string };
     const balance = Number(BigInt(bal.result ?? "0x0")) / 1e18;
     const txCount = cnt.result ? parseInt(cnt.result, 16) : 0;
     const price = await getPrice("eth");
-    return { chain: "eth", address, balance, balanceFiat: price != null ? balance * price : null, txCount, supported: true };
+    return { chain: "eth", address, balance, balanceFiat: price != null ? balance * price : null, txCount, supported: true, tokens };
   } catch (e) {
     return { chain: "eth", address, balance: 0, balanceFiat: null, txCount: 0, supported: true, error: (e as Error).message };
   }
