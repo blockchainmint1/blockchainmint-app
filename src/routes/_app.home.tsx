@@ -2,10 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueries } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { lookupAddress } from "@/lib/chains.functions";
-import { CoinMedallion } from "@/components/CoinMedallion";
-import { CHAINS, fmtAmount, fmtUsd, shortAddr, type ChainId } from "@/lib/chains";
+import { CoinLogo } from "@/components/CoinLogo";
+import { CHAINS, cscId, fmtAmount, fmtUsd, type ChainId } from "@/lib/chains";
 import { ScanLine, Plus } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
+
 
 export const Route = createFileRoute("/_app/home")({
   head: () => ({
