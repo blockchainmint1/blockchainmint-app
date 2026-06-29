@@ -13,10 +13,11 @@
  *
  * Each new alert row dispatches a push via FCM if the device has a token.
  *
- * Auth: a dedicated CRON_SECRET in the `x-cron-secret` header, compared in
- * constant time. The Supabase publishable key is NOT a secret — it ships in
- * the client bundle — so it can't be used to gate a privileged endpoint that
- * drives the service-role client and paid upstream APIs.
+ * Auth: a dedicated cron secret stored in Supabase Vault under
+ * `cron_webhook_secret`. Sent by pg_cron in the `x-cron-secret` header and
+ * compared in constant time. The Supabase publishable key is NOT a secret —
+ * it ships in the client bundle — so it can't be used to gate a privileged
+ * endpoint that drives the service-role client and paid upstream APIs.
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -26,11 +27,21 @@ export const Route = createFileRoute("/api/public/hooks/watch-tick")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const expected = process.env.CRON_SECRET;
-        if (!expected) {
-          // Fail closed: never allow the endpoint to run without a configured secret.
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Pull the expected secret from Vault (service-role only).
+        const { data: vaultRow, error: vaultErr } = await supabaseAdmin
+          .schema("vault" as never)
+          .from("decrypted_secrets" as never)
+          .select("decrypted_secret")
+          .eq("name", "cron_webhook_secret")
+          .maybeSingle();
+        const expected = (vaultRow as { decrypted_secret?: string } | null)?.decrypted_secret;
+        if (vaultErr || !expected) {
+          // Fail closed: never run without a configured secret.
           return new Response("forbidden", { status: 401 });
         }
+
         const got = request.headers.get("x-cron-secret") ?? "";
         const a = Buffer.from(got);
         const b = Buffer.from(expected);
