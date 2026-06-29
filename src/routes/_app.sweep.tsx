@@ -676,7 +676,7 @@ function BroadcastButton(props: {
           : <><Send className="size-4" /> {props.labelReady}</>}
       </button>
       <p className="mt-2 text-center text-[10px] text-muted-foreground">
-        Signed locally. Private key wiped from memory after signing.
+        Signed locally. Key bytes cleared after signing.
       </p>
     </div>
   );
