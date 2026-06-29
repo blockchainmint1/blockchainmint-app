@@ -15,10 +15,7 @@ export async function enablePrivacyScreen(): Promise<void> {
   if (!Capacitor.isNativePlatform?.()) return;
   try {
     const mod = await import("@capacitor-community/privacy-screen");
-    await mod.PrivacyScreen.enable({
-      android: { enable: true, dimBackground: true },
-      ios: { enable: true, blurEffect: "dark" } as never,
-    } as never);
+    await mod.PrivacyScreen.enable();
     privacyScreenEnabled = true;
   } catch (e) {
     console.warn("[security] privacy screen unavailable", e);
