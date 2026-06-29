@@ -128,7 +128,7 @@ function SweepPage() {
         <ShieldAlert className="mb-2 size-5 text-accent" />
         <p className="font-medium text-foreground">Your key never leaves this device.</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Signing happens locally. We fetch network state and broadcast the signed transaction — the private key is wiped from memory the moment you leave this page or complete the sweep.
+          Signing happens locally. We fetch network state and broadcast the signed transaction — the private key bytes are zeroed after signing and the field is cleared when you leave this page. For maximum safety, sweep on a device you trust and avoid screenshots.
         </p>
       </div>
 
@@ -676,7 +676,7 @@ function BroadcastButton(props: {
           : <><Send className="size-4" /> {props.labelReady}</>}
       </button>
       <p className="mt-2 text-center text-[10px] text-muted-foreground">
-        Signed locally. Private key wiped from memory after signing.
+        Signed locally. Key bytes cleared after signing.
       </p>
     </div>
   );

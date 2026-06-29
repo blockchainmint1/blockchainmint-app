@@ -45,6 +45,13 @@ import java.io.File
 @CapacitorPlugin(name = "LegacyDataBridge")
 class LegacyDataBridgePlugin : Plugin() {
 
+    // Fields that must NEVER cross the native bridge — they are secrets that
+    // can spend funds. The JS importer only needs public addresses + labels.
+    private val SECRET_KEYS = setOf(
+        "privateKey", "private_key", "wif", "secret", "secretKey",
+        "mnemonic", "seed", "seedPhrase", "phrase", "xprv", "xpriv"
+    )
+
     @PluginMethod
     fun read(call: PluginCall) {
         try {
@@ -75,9 +82,32 @@ class LegacyDataBridgePlugin : Plugin() {
                     }
                 }
             }
+            // SECURITY (BM-12): strip private keys / seeds / mnemonics before
+            // they cross the bridge into the WebView. The remote origin is the
+            // trust root for the whole installed base — secrets must never
+            // enter JS memory there.
+            sanitize(out)
             call.resolve(JSObject().put("data", out.toString()))
         } catch (e: Exception) {
             call.reject("Legacy read failed: ${e.message}", e)
+        }
+    }
+
+    private fun sanitize(node: Any?) {
+        when (node) {
+            is JSONObject -> {
+                val keys = node.keys().asSequence().toList()
+                for (k in keys) {
+                    if (SECRET_KEYS.contains(k)) {
+                        node.remove(k)
+                    } else {
+                        sanitize(node.opt(k))
+                    }
+                }
+            }
+            is JSONArray -> {
+                for (i in 0 until node.length()) sanitize(node.opt(i))
+            }
         }
     }
 }
