@@ -49,7 +49,6 @@ export const Route = createFileRoute("/api/public/hooks/watch-tick")({
           return new Response("forbidden", { status: 401 });
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { summarize } = await import("@/lib/chains.functions");
         const { priceUsd } = await import("@/lib/prices.server");
         const { sendPush } = await import("@/lib/push.server");
