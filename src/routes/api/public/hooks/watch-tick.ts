@@ -13,18 +13,28 @@
  *
  * Each new alert row dispatches a push via FCM if the device has a token.
  *
- * Auth: the Supabase publishable key in the `apikey` header (the cron pattern).
+ * Auth: a dedicated CRON_SECRET in the `x-cron-secret` header, compared in
+ * constant time. The Supabase publishable key is NOT a secret — it ships in
+ * the client bundle — so it can't be used to gate a privileged endpoint that
+ * drives the service-role client and paid upstream APIs.
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { timingSafeEqual } from "node:crypto";
 
 export const Route = createFileRoute("/api/public/hooks/watch-tick")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const expected = process.env.SUPABASE_PUBLISHABLE_KEY;
-        const got = request.headers.get("apikey") ?? request.headers.get("Apikey");
-        if (!expected || got !== expected) {
+        const expected = process.env.CRON_SECRET;
+        if (!expected) {
+          // Fail closed: never allow the endpoint to run without a configured secret.
+          return new Response("forbidden", { status: 401 });
+        }
+        const got = request.headers.get("x-cron-secret") ?? "";
+        const a = Buffer.from(got);
+        const b = Buffer.from(expected);
+        if (a.length !== b.length || !timingSafeEqual(a, b)) {
           return new Response("forbidden", { status: 401 });
         }
 
