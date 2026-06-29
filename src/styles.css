@@ -159,8 +159,19 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { color-scheme: light; background-color: var(--color-background); }
+  * {
+    border-color: var(--color-border);
+    /* Prevent native pinch/zoom on the app shell */
+    touch-action: pan-y;
+  }
+  html {
+    color-scheme: light;
+    background-color: var(--color-background);
+    /* Stop iOS double-tap zoom from enlarging the whole app */
+    touch-action: manipulation;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+  }
   html.dark { color-scheme: dark; }
   body {
     background-color: var(--color-background);
@@ -168,6 +179,13 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Prevent pull-to-refresh/bounce from breaking the native app feel */
+    overscroll-behavior-y: none;
+    touch-action: pan-y;
+  }
+  /* Interactive elements can scroll horizontally when needed (e.g. QR address) */
+  button, a, input, textarea, select, [role="button"] {
+    touch-action: manipulation;
   }
   /* Tabular numerics everywhere we show money/balances */
   .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
