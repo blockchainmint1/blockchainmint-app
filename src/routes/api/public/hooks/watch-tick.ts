@@ -78,7 +78,8 @@ export const Route = createFileRoute("/api/public/hooks/watch-tick")({
           .limit(500);
 
         if (loadErr) {
-          return Response.json({ ok: false, error: loadErr.message }, { status: 500 });
+          console.error("[watch-tick] load failed", loadErr);
+          return Response.json({ ok: false, error: "internal_error" }, { status: 500 });
         }
 
         const watched = (rows ?? []) as WatchRow[];

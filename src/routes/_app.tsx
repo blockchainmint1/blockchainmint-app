@@ -5,6 +5,7 @@ import { Splash } from "@/components/Splash";
 import { LegacyImportPrompt } from "@/components/LegacyImportPrompt";
 import { useAlertsAutoSync } from "@/lib/alertsSync";
 import { registerForPush } from "@/lib/push";
+import { enablePrivacyScreen } from "@/lib/nativeSecurity";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -12,7 +13,10 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   useAlertsAutoSync();
-  useEffect(() => { void registerForPush(); }, []);
+  useEffect(() => {
+    void registerForPush();
+    void enablePrivacyScreen();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
