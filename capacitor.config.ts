@@ -29,7 +29,7 @@ const config: CapacitorConfig = {
   // webDir is only used when bundling local assets. We load the live URL
   // instead (see `server.url` below), but Capacitor still requires the path
   // to exist — `dist` is created by `npm run build`.
-  webDir: "dist",
+  webDir: ".output/public",
   server: {
     // Point the native shell at the live published web app. Change this to
     // the Lovable preview URL during development to test new builds without
