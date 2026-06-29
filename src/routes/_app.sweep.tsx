@@ -19,6 +19,7 @@ import {
   type EthSweepContext, type EthSweepToken,
 } from "@/lib/chains.functions";
 import { signNativeEthSweep, signErc20Sweep } from "@/lib/ethTx";
+import { requireBiometric } from "@/lib/nativeSecurity";
 
 const sweepSearchSchema = z.object({
   chain: z.enum(["btc","eth","ltc","doge","bch","bsc","ada","sol","bnb","txc","iskander"]).optional(),
@@ -362,6 +363,8 @@ function UtxoCompose(props: {
 
   async function handleBroadcast() {
     if (!utxos || !effectiveFeeRate) return;
+    const ok = await requireBiometric("Authorize sweep broadcast");
+    if (!ok) { setPhase({ kind: "error", message: "Biometric authentication cancelled." }); return; }
     setPhase({ kind: "broadcasting" });
     try {
       const privKey = hexToBytes(parsed.privateKeyHex);
@@ -496,6 +499,8 @@ function EthCompose(props: {
 
   async function handleBroadcast() {
     if (!ctx) return;
+    const ok = await requireBiometric("Authorize sweep broadcast");
+    if (!ok) { setPhase({ kind: "error", message: "Biometric authentication cancelled." }); return; }
     setPhase({ kind: "broadcasting" });
     try {
       const fee = {
