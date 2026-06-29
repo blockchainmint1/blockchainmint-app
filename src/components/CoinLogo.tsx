@@ -34,26 +34,15 @@ export function CoinLogo({
 
   if (chain === "txc") {
     return (
-      <div
-        className={`medallion-copper relative inline-flex items-center justify-center rounded-full ${className}`}
+      <img
+        src={txcIcon.url}
+        alt="TEXITcoin"
+        width={size}
+        height={size}
+        className={`shrink-0 rounded-full ${className}`}
         style={{ width: size, height: size }}
-        aria-label="TEXITcoin"
-      >
-        <span
-          className="absolute inset-[6%] rounded-full"
-          style={{
-            boxShadow:
-              "inset 0 0 0 1px oklch(0 0 0 / 0.25), inset 0 0 0 2px oklch(1 0 0 / 0.15)",
-          }}
-        />
-        <img
-          src={txcIcon.url}
-          alt="TEXITcoin"
-          className="relative"
-          style={{ width: size * 0.62, height: size * 0.62, objectFit: "contain" }}
-          loading="lazy"
-        />
-      </div>
+        loading="lazy"
+      />
     );
   }
 
