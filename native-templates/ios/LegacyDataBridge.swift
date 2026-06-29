@@ -26,6 +26,13 @@ import Capacitor
 @objc(LegacyDataBridge)
 public class LegacyDataBridge: CAPPlugin {
 
+    // SECURITY (BM-12): fields that must NEVER cross the native bridge.
+    // The JS importer only needs public addresses + labels.
+    private static let secretKeys: Set<String> = [
+        "privateKey", "private_key", "wif", "secret", "secretKey",
+        "mnemonic", "seed", "seedPhrase", "phrase", "xprv", "xpriv"
+    ]
+
     @objc public override func load() {}
 
     @objc func read(_ call: CAPPluginCall) {
@@ -35,12 +42,29 @@ public class LegacyDataBridge: CAPPlugin {
                 call.resolve(["data": NSNull()])
                 return
             }
-            let json = try JSONSerialization.data(withJSONObject: blob!, options: [])
+            let sanitized = Self.sanitize(blob!) as! [String: Any]
+            let json = try JSONSerialization.data(withJSONObject: sanitized, options: [])
             let str = String(data: json, encoding: .utf8) ?? ""
             call.resolve(["data": str])
         } catch {
             call.reject("Legacy read failed: \(error.localizedDescription)")
         }
+    }
+
+    /// Recursively strip secret fields from any nested dict / array.
+    static func sanitize(_ value: Any) -> Any {
+        if let dict = value as? [String: Any] {
+            var out: [String: Any] = [:]
+            for (k, v) in dict {
+                if secretKeys.contains(k) { continue }
+                out[k] = sanitize(v)
+            }
+            return out
+        }
+        if let arr = value as? [Any] {
+            return arr.map { sanitize($0) }
+        }
+        return value
     }
 
     /// Returns a dictionary of { key: parsed-value } from the legacy
