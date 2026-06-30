@@ -1,0 +1,37 @@
+{
+  "name": "legacy-data-bridge",
+  "version": "1.0.0",
+  "description": "Reads legacy Blockchain Mint (Expo/RN) AsyncStorage on first launch.",
+  "main": "dist/plugin.cjs.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "unpkg": "dist/plugin.js",
+  "files": [
+    "android/src/main/",
+    "android/build.gradle",
+    "dist/",
+    "ios/Sources",
+    "ios/Tests",
+    "Package.swift",
+    "LegacyDataBridge.podspec"
+  ],
+  "scripts": {
+    "build": "echo no-op"
+  },
+  "author": "Rearden Metals",
+  "license": "MIT",
+  "devDependencies": {
+    "@capacitor/core": "^8.0.0"
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^8.0.0"
+  },
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    },
+    "android": {
+      "src": "android"
+    }
+  }
+}
