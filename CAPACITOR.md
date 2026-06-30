@@ -81,16 +81,17 @@ That's it — `src/lib/push.server.ts` already speaks FCM HTTP v1.
 
 ## Legacy data import
 
-The first-launch importer reads the old React Native AsyncStorage data in
-the existing app sandbox via a tiny custom Capacitor plugin called
-`LegacyDataBridge`. The ready-to-drop source files live in
-`native-templates/` — see `native-templates/README.md` for the exact
-copy-paste steps for iOS and Android.
+The first-launch importer reads the old React Native AsyncStorage data via
+a local Capacitor plugin called `LegacyDataBridge`, packaged at
+`capacitor-plugins/legacy-data-bridge/` and declared as a `file:` dependency
+in `package.json`. `npx cap sync` registers it into both native projects
+automatically — there is nothing to drag in Xcode and no `MainActivity`
+edits needed.
 
-Both shims preserve the same bundle id, so iOS/Android will hand the old
-app's sandbox over to the new binary automatically. Without this plugin,
-upgraders keep their install but start with an empty coin list (they can
-still re-add coins manually or paste a JSON export at `/import`).
+Both shims preserve the same bundle id, so iOS/Android hand the old app's
+sandbox over to the new binary on update. Without this plugin, upgraders
+keep their install but start with an empty coin list.
+
 
 ## Testing against preview vs production
 
