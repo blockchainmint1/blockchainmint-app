@@ -1,50 +1,45 @@
 # Native Templates
 
-Drop-in source files for the Capacitor native projects after you run
-`npx cap add ios` and `npx cap add android`. They are kept here (outside
-`ios/` and `android/`) so the repo stays clean before you scaffold the
-native projects on your Mac.
+Most native wiring is now handled by the local Capacitor plugin package at
+`capacitor-plugins/legacy-data-bridge/`, which is declared as a `file:`
+dependency in the root `package.json`. After `bun install` and `npx cap sync`,
+both iOS and Android pick up the `LegacyDataBridge` plugin automatically —
+no manual Xcode dragging, no `MainActivity` edits.
 
-## `LegacyDataBridge` — read the old Blockchain Mint app's data
+The loose `ios/` and `android/` folders in this directory are kept only as
+historical reference; the live source lives inside the plugin package.
 
-The new app's first-launch importer (`src/lib/legacyImport.ts`) looks for a
-Capacitor plugin named `LegacyDataBridge` with a single `read()` method.
-This folder contains the iOS + Android implementations.
+## How the auto-import works
 
-### iOS
+1. `src/lib/legacyImport.ts` calls `registerPlugin("LegacyDataBridge").read()`
+   on first launch.
+2. On iOS, the Swift implementation reads
+   `Library/Application Support/<bundle>/RCTAsyncLocalStorage_V1/manifest.json`
+   from the existing app sandbox (the bundle id matches the App Store listing
+   `com.rearden-metals.Cold-Storage-Coins`, so the OS hands the sandbox over
+   on update).
+3. On Android, the Kotlin implementation opens the legacy `RKStorage` SQLite
+   DB read-only and dumps `catalystLocalStorage`.
+4. Both implementations strip private keys / seeds / mnemonics before the
+   blob crosses the bridge (BM-12).
+5. `LegacyImportPrompt` shows the user what was found and lets them accept
+   or skip.
 
-1. `npx cap add ios` (once).
-2. In Xcode, drag both files into the `App/App/` group (Copy items if needed,
-   target membership = `App`):
-   - `native-templates/ios/LegacyDataBridge.swift`
-   - `native-templates/ios/LegacyDataBridge.m`
-3. Build & run on a device that has the old app installed.
-   Capacitor auto-registers the plugin via the `CAP_PLUGIN` macro.
+## Release checklist
 
-### Android
+```bash
+bun install
+bun run build
+npx cap sync           # registers LegacyDataBridge into both native projects
+npx cap open ios       # Archive → upload
+npx cap open android   # Generate Signed Bundle → upload
+```
 
-1. `npx cap add android` (once).
-2. Copy `native-templates/android/LegacyDataBridgePlugin.kt` into
-   `android/app/src/main/java/com/coldstoragecoins/LegacyDataBridgePlugin.kt`.
-   (Match the package to your `applicationId` — by default
-   `com.coldstoragecoins`.)
-3. Open `MainActivity.java` (or `.kt`) and register the plugin in `onCreate`
-   before `super.onCreate(...)`:
-
-   ```java
-   import com.coldstoragecoins.LegacyDataBridgePlugin;
-   // ...
-   registerPlugin(LegacyDataBridgePlugin.class);
-   ```
-
-4. Rebuild.
-
-### Sanity check
+## Sanity check on device
 
 On a device with the old app installed, launch the new build. The
-"We found N coins from your old Blockchain Mint app" modal should appear
-on first launch. If it doesn't, attach a debugger and call the plugin
-directly from JS:
+"Bring over your old coins?" dialog should appear. To debug from the JS
+console:
 
 ```js
 import { registerPlugin } from "@capacitor/core";
@@ -52,6 +47,5 @@ const Bridge = registerPlugin("LegacyDataBridge");
 console.log(await Bridge.read());
 ```
 
-`{ data: null }` means the plugin loaded but found no legacy storage on this
-device (expected on a fresh install). A JSON string means data was found
-and will be passed to the importer.
+`{ data: null }` → plugin loaded but no legacy storage on this device.
+A JSON string → blob found and will be passed to the importer.
