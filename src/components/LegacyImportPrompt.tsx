@@ -1,9 +1,9 @@
 /**
- * First-launch detector + modal for legacy Blockchain Mint data.
+ * First-launch handler for legacy Blockchain Mint data.
  *
- * On native, polls the LegacyDataBridge once. If a blob is found and the user
- * hasn't decided yet, pops a dialog summarizing the importable coins and lets
- * them accept or skip. Web shows nothing — the manual path lives at /import.
+ * Silently auto-imports the user's coins from the previous install (we never
+ * stored private keys, so there's no trust decision to make) and then shows
+ * a one-time welcome dialog asking for a store review.
  */
 import { useEffect, useState } from "react";
 import {
@@ -12,70 +12,88 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   applyLegacyImport, legacyPromptDismissed, markLegacyDeclined,
-  previewLegacyBlob, readLegacyBlobNative, type LegacyImportPreview,
+  previewLegacyBlob, readLegacyBlobNative,
 } from "@/lib/legacyImport";
 import { toast } from "sonner";
 
+const WELCOME_FLAG = "csc.welcome.v5.shown";
+const APP_STORE_URL = "https://apps.apple.com/us/app/blockchain-mint/id1352363663";
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.coldstoragecoins";
+
+function detectPlatform(): "ios" | "android" | "web" {
+  if (typeof navigator === "undefined") return "web";
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod/i.test(ua)) return "ios";
+  if (/Android/i.test(ua)) return "android";
+  return "web";
+}
+
 export function LegacyImportPrompt() {
-  const [preview, setPreview] = useState<LegacyImportPreview | null>(null);
-  const [open, setOpen] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const [importedCount, setImportedCount] = useState(0);
 
   useEffect(() => {
-    if (legacyPromptDismissed()) return;
     let cancelled = false;
     void (async () => {
-      const blob = await readLegacyBlobNative();
-      if (cancelled || !blob) return;
-      const p = previewLegacyBlob(blob);
-      if (p.importable.length === 0) {
-        markLegacyDeclined();
-        return;
+      // 1. Silent legacy import (only if not already done)
+      if (!legacyPromptDismissed()) {
+        try {
+          const blob = await readLegacyBlobNative();
+          if (!cancelled && blob) {
+            const p = previewLegacyBlob(blob);
+            if (p.importable.length > 0) {
+              const n = applyLegacyImport(p);
+              setImportedCount(n);
+              toast.success(`Restored ${n} ${n === 1 ? "coin" : "coins"} from your previous install`);
+            } else {
+              markLegacyDeclined();
+            }
+          } else if (!cancelled && !blob) {
+            // No legacy data on this device — don't keep polling forever
+            markLegacyDeclined();
+          }
+        } catch {
+          // Ignore — never block the app on import failures
+        }
       }
-      setPreview(p);
-      setOpen(true);
+
+      // 2. Show welcome dialog once per install
+      if (!cancelled && typeof window !== "undefined" && !localStorage.getItem(WELCOME_FLAG)) {
+        setWelcomeOpen(true);
+      }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  if (!preview) return null;
-
-  const accept = () => {
-    const n = applyLegacyImport(preview);
-    toast.success(`Imported ${n} ${n === 1 ? "coin" : "coins"} from your old app`);
-    setOpen(false);
+  const dismissWelcome = () => {
+    if (typeof window !== "undefined") localStorage.setItem(WELCOME_FLAG, String(Date.now()));
+    setWelcomeOpen(false);
   };
-  const decline = () => {
-    markLegacyDeclined();
-    setOpen(false);
-    toast("You can still import later from Settings");
+
+  const leaveReview = () => {
+    const platform = detectPlatform();
+    const url = platform === "android" ? PLAY_STORE_URL : APP_STORE_URL;
+    window.open(url, "_blank", "noopener,noreferrer");
+    dismissWelcome();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) decline(); }}>
+    <Dialog open={welcomeOpen} onOpenChange={(v) => { if (!v) dismissWelcome(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Bring over your old coins?</DialogTitle>
+          <DialogTitle>Welcome to the new Blockchain Mint</DialogTitle>
           <DialogDescription>
-            We found <strong>{preview.importable.length}</strong> {preview.importable.length === 1 ? "coin" : "coins"} from your previous Blockchain Mint install on this device.
-            {preview.unrecognized.length > 0 && <> {preview.unrecognized.length} couldn't be read and will be skipped.</>}
+            {importedCount > 0 ? (
+              <>We brought your <strong>{importedCount}</strong> {importedCount === 1 ? "coin" : "coins"} over from the old version. Everything's faster, prettier, and ready to go.</>
+            ) : (
+              <>A complete rebuild — faster, prettier, and ready for your collection.</>
+            )}
+            {" "}If you like it, a quick review goes a long way toward fixing our ratings.
           </DialogDescription>
         </DialogHeader>
-        <div className="max-h-56 overflow-y-auto rounded-md border border-border bg-muted/30 p-3 text-xs">
-          <ul className="space-y-1.5">
-            {preview.importable.slice(0, 50).map((c, i) => (
-              <li key={i} className="flex items-center justify-between gap-2">
-                <span className="font-mono uppercase text-muted-foreground">{c.chain}</span>
-                <span className="flex-1 truncate font-mono text-foreground/80">{c.address}</span>
-              </li>
-            ))}
-            {preview.importable.length > 50 && (
-              <li className="pt-1 text-center text-muted-foreground">+ {preview.importable.length - 50} more</li>
-            )}
-          </ul>
-        </div>
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="ghost" onClick={decline}>Not now</Button>
-          <Button onClick={accept}>Import {preview.importable.length}</Button>
+          <Button variant="ghost" onClick={dismissWelcome}>Maybe later</Button>
+          <Button onClick={leaveReview}>Leave a review</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
