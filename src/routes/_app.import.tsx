@@ -145,6 +145,19 @@ function ImportPage() {
           <Button onClick={doImport} className="mt-3 w-full">Import {preview.importable.length} coins</Button>
         </section>
       )}
+
+      <section className="mb-8 rounded-xl border border-dashed border-border bg-card/60 p-4">
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Stethoscope className="size-4 text-primary" /> Diagnostic
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Not seeing your old coins auto-import? Tap below and send the output to support.
+        </p>
+        <Button variant="outline" onClick={runDiagnostic} className="w-full">Run legacy bridge diagnostic</Button>
+        {diag && (
+          <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-3 font-mono text-[10px] text-foreground/80">{diag}</pre>
+        )}
+      </section>
     </div>
   );
 }
