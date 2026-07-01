@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, FileJson, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, FileJson, CheckCircle2, AlertTriangle, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  applyLegacyImport, previewLegacyBlob, type LegacyBlob, type LegacyImportPreview,
+  applyLegacyImport, previewLegacyBlob, readLegacyBlobNative,
+  type LegacyBlob, type LegacyImportPreview,
 } from "@/lib/legacyImport";
 import { toast } from "sonner";
 
