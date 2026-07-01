@@ -19,6 +19,46 @@ function ImportPage() {
   const [raw, setRaw] = useState("");
   const [preview, setPreview] = useState<LegacyImportPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [diag, setDiag] = useState<string | null>(null);
+
+  async function runDiagnostic() {
+    const lines: string[] = [];
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "(no navigator)";
+    lines.push(`UA: ${ua}`);
+    try {
+      const capImport = new Function("m", "return import(m)") as (m: string) => Promise<{
+        Capacitor: { isNativePlatform: () => boolean; getPlatform: () => string };
+        registerPlugin: <T>(name: string) => T;
+      }>;
+      const core = await capImport("@capacitor/core");
+      lines.push(`Capacitor loaded: yes`);
+      lines.push(`isNativePlatform: ${core?.Capacitor?.isNativePlatform?.()}`);
+      lines.push(`platform: ${core?.Capacitor?.getPlatform?.()}`);
+      type Bridge = { read: () => Promise<{ data: string | null }> };
+      const Bridge = core.registerPlugin<Bridge>("LegacyDataBridge");
+      lines.push(`Plugin registered: ${!!Bridge}`);
+      try {
+        const t0 = Date.now();
+        const res = await Bridge.read();
+        lines.push(`read() ok in ${Date.now() - t0}ms`);
+        if (!res?.data) {
+          lines.push(`data: null (no legacy sandbox found)`);
+        } else {
+          const parsed = JSON.parse(res.data) as Record<string, unknown>;
+          lines.push(`data keys: ${Object.keys(parsed).join(", ") || "(none)"}`);
+          const wallets = (parsed as { wallets?: unknown[] }).wallets;
+          lines.push(`wallets: ${Array.isArray(wallets) ? wallets.length : "n/a"}`);
+          lines.push("--- raw (first 400 chars) ---");
+          lines.push(res.data.slice(0, 400));
+        }
+      } catch (e) {
+        lines.push(`read() ERROR: ${(e as Error).message ?? String(e)}`);
+      }
+    } catch (e) {
+      lines.push(`Capacitor import failed: ${(e as Error).message ?? String(e)}`);
+    }
+    setDiag(lines.join("\n"));
+  }
 
   function analyze() {
     setError(null);
