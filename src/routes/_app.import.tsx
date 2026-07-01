@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, FileJson, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, FileJson, CheckCircle2, AlertTriangle, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  applyLegacyImport, previewLegacyBlob, type LegacyBlob, type LegacyImportPreview,
+  applyLegacyImport, previewLegacyBlob, readLegacyBlobNative,
+  type LegacyBlob, type LegacyImportPreview,
 } from "@/lib/legacyImport";
 import { toast } from "sonner";
 
@@ -18,6 +19,46 @@ function ImportPage() {
   const [raw, setRaw] = useState("");
   const [preview, setPreview] = useState<LegacyImportPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [diag, setDiag] = useState<string | null>(null);
+
+  async function runDiagnostic() {
+    const lines: string[] = [];
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "(no navigator)";
+    lines.push(`UA: ${ua}`);
+    try {
+      const capImport = new Function("m", "return import(m)") as (m: string) => Promise<{
+        Capacitor: { isNativePlatform: () => boolean; getPlatform: () => string };
+        registerPlugin: <T>(name: string) => T;
+      }>;
+      const core = await capImport("@capacitor/core");
+      lines.push(`Capacitor loaded: yes`);
+      lines.push(`isNativePlatform: ${core?.Capacitor?.isNativePlatform?.()}`);
+      lines.push(`platform: ${core?.Capacitor?.getPlatform?.()}`);
+      type Bridge = { read: () => Promise<{ data: string | null }> };
+      const Bridge = core.registerPlugin<Bridge>("LegacyDataBridge");
+      lines.push(`Plugin registered: ${!!Bridge}`);
+      try {
+        const t0 = Date.now();
+        const res = await Bridge.read();
+        lines.push(`read() ok in ${Date.now() - t0}ms`);
+        if (!res?.data) {
+          lines.push(`data: null (no legacy sandbox found)`);
+        } else {
+          const parsed = JSON.parse(res.data) as Record<string, unknown>;
+          lines.push(`data keys: ${Object.keys(parsed).join(", ") || "(none)"}`);
+          const wallets = (parsed as { wallets?: unknown[] }).wallets;
+          lines.push(`wallets: ${Array.isArray(wallets) ? wallets.length : "n/a"}`);
+          lines.push("--- raw (first 400 chars) ---");
+          lines.push(res.data.slice(0, 400));
+        }
+      } catch (e) {
+        lines.push(`read() ERROR: ${(e as Error).message ?? String(e)}`);
+      }
+    } catch (e) {
+      lines.push(`Capacitor import failed: ${(e as Error).message ?? String(e)}`);
+    }
+    setDiag(lines.join("\n"));
+  }
 
   function analyze() {
     setError(null);
@@ -104,6 +145,19 @@ function ImportPage() {
           <Button onClick={doImport} className="mt-3 w-full">Import {preview.importable.length} coins</Button>
         </section>
       )}
+
+      <section className="mb-8 rounded-xl border border-dashed border-border bg-card/60 p-4">
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Stethoscope className="size-4 text-primary" /> Diagnostic
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Not seeing your old coins auto-import? Tap below and send the output to support.
+        </p>
+        <Button variant="outline" onClick={runDiagnostic} className="w-full">Run legacy bridge diagnostic</Button>
+        {diag && (
+          <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-3 font-mono text-[10px] text-foreground/80">{diag}</pre>
+        )}
+      </section>
     </div>
   );
 }

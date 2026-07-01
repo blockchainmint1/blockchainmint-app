@@ -35,7 +35,10 @@ export function LegacyImportPrompt() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      // 1. Silent legacy import (only if not already done)
+      // 1. Silent legacy import — retry on every launch until it succeeds once.
+      //    We DON'T mark "declined" on empty/null results anymore: if a prior
+      //    build shipped without the native bridge, the flag would be locked
+      //    on forever and a future fix could never restore coins.
       if (!legacyPromptDismissed()) {
         try {
           const blob = await readLegacyBlobNative();
@@ -45,15 +48,10 @@ export function LegacyImportPrompt() {
               const n = applyLegacyImport(p);
               setImportedCount(n);
               toast.success(`Restored ${n} ${n === 1 ? "coin" : "coins"} from your previous install`);
-            } else {
-              markLegacyDeclined();
             }
-          } else if (!cancelled && !blob) {
-            // No legacy data on this device — don't keep polling forever
-            markLegacyDeclined();
           }
         } catch {
-          // Ignore — never block the app on import failures
+          // Never block the app on import failures; never permanently dismiss.
         }
       }
 
