@@ -1,7 +1,13 @@
-# Beekeeper keygen plugin
+# Beekeeper keygen plugins (bee12 / bee24)
 
-`beekeeper.py` is the key-generation plugin for **Beekeeper**, the Cold Storage Coin
-series whose only engraved secret is a **24-word BIP-39 seed phrase** (256-bit entropy).
+Beekeeper is the Cold Storage Coin series whose only engraved secret is a BIP-39
+seed phrase. There are two variants, one file each — identical behaviour apart
+from the phrase length:
+
+| File | Class | Words | Entropy |
+| --- | --- | --- | --- |
+| `bee12.py` | `Bee12CoinService` | 12 | 128-bit |
+| `bee24.py` | `Bee24CoinService` | 24 | 256-bit |
 
 ## How the existing keygen works
 
@@ -45,7 +51,7 @@ filenames:
 ## What Beekeeper changes
 
 - The secret of record is the **mnemonic**, not a WIF. `key.txt` therefore
-  contains the 24 words — that's the file the laser/print pipeline uses.
+  contains the words (12 or 24) — that's the file the laser/print pipeline uses.
   A `wif.txt` extra is written for the sweep/recovery tooling only.
 
 - Derivation is **standard BIP-44**: `m/44'/<slip44>'/0'/0/0`. The legacy BTC/LTC
@@ -58,15 +64,20 @@ filenames:
 
 ## Install into the keygen package
 
-Copy the file to `keygen/currencies/beekeeper_crypto_coin_service.py` and register it
-in `keygen/crypto_coin_factory.py`:
+Copy the files to `keygen/currencies/bee12_crypto_coin_service.py` and
+`keygen/currencies/bee24_crypto_coin_service.py`, then register them in
+`keygen/crypto_coin_factory.py`:
 
 ```python
-from keygen.currencies.beekeeper_crypto_coin_service import BeekeeperCoinService
+from keygen.currencies.bee12_crypto_coin_service import Bee12CoinService
+from keygen.currencies.bee24_crypto_coin_service import Bee24CoinService
 
-'BEEKEEPER':     BeekeeperCoinService,                  # BTC by default
-'BEEKEEPER-LTC': lambda: BeekeeperCoinService('LTC'),
-'BEEKEEPER-ETH': lambda: BeekeeperCoinService('ETH'),
+'BEE12':     Bee12CoinService,                  # BTC by default
+'BEE12-LTC': lambda: Bee12CoinService('LTC'),
+'BEE12-ETH': lambda: Bee12CoinService('ETH'),
+'BEE24':     Bee24CoinService,
+'BEE24-LTC': lambda: Bee24CoinService('LTC'),
+'BEE24-ETH': lambda: Bee24CoinService('ETH'),
 ```
 
 Add the new currencies to `get_available_currencies()` so they appear in the
@@ -76,11 +87,12 @@ keygen widget's dropdown.
 
 ```bash
 pip install bip_utils          # 1.7.0 pin and 2.x are both supported
-python beekeeper.py --count 100 --chain BTC --laser A --out ./out
+python bee24.py --count 100 --chain BTC --laser A --out ./out
+python bee12.py --count 100 --chain BTC --laser A --out ./out
 ```
 
-Outputs `address.csv`, `asset_ids.txt`, `seeds.txt`, `private.txt`, `public.txt`,
-`numbers.txt`.
+Outputs the five laser files (`keypair.txt`, `snip.txt`, `key.txt`, `labels.txt`,
+`numbers.txt`) plus `wif.txt`.
 
-> Run key generation offline only. `seeds.txt` and `private.txt` are the live
+> Run key generation offline only. `key.txt` and `wif.txt` are the live
 > secrets — they never belong on a networked machine or in this repo.
