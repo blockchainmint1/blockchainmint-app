@@ -1,7 +1,13 @@
-# Beekeeper keygen plugin
+# Beekeeper keygen plugins (bee12 / bee24)
 
-`beekeeper.py` is the key-generation plugin for **Beekeeper**, the Cold Storage Coin
-series whose only engraved secret is a **24-word BIP-39 seed phrase** (256-bit entropy).
+Beekeeper is the Cold Storage Coin series whose only engraved secret is a BIP-39
+seed phrase. There are two variants, one file each — identical behaviour apart
+from the phrase length:
+
+| File | Class | Words | Entropy |
+| --- | --- | --- | --- |
+| `bee12.py` | `Bee12CoinService` | 12 | 128-bit |
+| `bee24.py` | `Bee24CoinService` | 24 | 256-bit |
 
 ## How the existing keygen works
 
