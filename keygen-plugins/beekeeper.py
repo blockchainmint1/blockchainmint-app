@@ -49,11 +49,15 @@ from bip_utils import (
     Bip39MnemonicGenerator,
     Bip39MnemonicValidator,
     Bip39SeedGenerator,
-    Bip39WordsNum,
     Bip44,
     Bip44Changes,
     Bip44Coins,
 )
+
+try:  # bip_utils >= 2.x
+    from bip_utils import Bip39WordsNum
+except ImportError:  # bip_utils 1.7.0 (the pin in keygen-requirements.txt)
+    Bip39WordsNum = None
 
 # --------------------------------------------------------------------------
 # Base-class / model shims.
@@ -114,6 +118,29 @@ BEEKEEPER_CHAINS = {
 WORDS_COUNT = 24
 
 
+# --------------------------------------------------------------------------
+# bip_utils 1.7.0 uses static methods and int word counts; 2.x uses instances
+# and the Bip39WordsNum enum. Support both so this plugin runs against the
+# pinned keygen-requirements.txt and against a modern environment.
+# --------------------------------------------------------------------------
+
+def _new_mnemonic() -> str:
+    if Bip39WordsNum is not None:
+        words = Bip39WordsNum.WORDS_NUM_24
+        try:
+            return str(Bip39MnemonicGenerator().FromWordsNumber(words))
+        except TypeError:
+            return str(Bip39MnemonicGenerator.FromWordsNumber(words))
+    return str(Bip39MnemonicGenerator.FromWordsNumber(WORDS_COUNT))
+
+
+def _is_valid_mnemonic(mnemonic: str) -> bool:
+    try:
+        return bool(Bip39MnemonicValidator().IsValid(mnemonic))  # 2.x
+    except TypeError:
+        return bool(Bip39MnemonicValidator(mnemonic).IsValid())  # 1.7.0
+
+
 class BeekeeperCoinService(CoinService):
     """Cold Storage Coin whose only engraved secret is a 24-word seed phrase."""
 
@@ -131,7 +158,7 @@ class BeekeeperCoinService(CoinService):
     # -- generation --------------------------------------------------------
 
     def generate(self) -> CryptoCoin:
-        mnemonic = str(Bip39MnemonicGenerator.FromWordsNumber(WORDS_COUNT))
+        mnemonic = _new_mnemonic()
         return self.get_coin_from_mnemonic(mnemonic)
 
     def generate_list(self, count):
@@ -155,7 +182,7 @@ class BeekeeperCoinService(CoinService):
                     WORDS_COUNT, len(words)
                 )
             )
-        if not Bip39MnemonicValidator(mnemonic).IsValid():
+        if not _is_valid_mnemonic(mnemonic):
             raise ValueError("Invalid BIP-39 seed phrase (checksum failed).")
 
         seed_bytes = Bip39SeedGenerator(mnemonic).Generate()
@@ -169,8 +196,11 @@ class BeekeeperCoinService(CoinService):
             .AddressIndex(0)
         )
         address = acct.PublicKey().ToAddress()
-        wif = acct.PrivateKey().ToWif()
-        if not wif:  # ETH and other non-WIF chains
+        try:
+            wif = acct.PrivateKey().ToWif()
+        except Exception:  # ETH and other non-WIF chains
+            wif = ""
+        if not wif:
             wif = acct.PrivateKey().Raw().ToHex()
         return CryptoCoin(address, wif, mnemonic)
 
