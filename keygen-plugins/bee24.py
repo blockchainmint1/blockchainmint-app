@@ -1,19 +1,19 @@
 """
-Beekeeper coin service — 24-word seed phrase Cold Storage Coin.
+Beekeeper Bee24 coin service — 24-word seed phrase Cold Storage Coin.
 
 Drop this file into the `keygen` package used by csc-manager-ui
 (https://github.com/blockchainmint1/csc-manager-ui) as:
 
-    keygen/currencies/beekeeper_crypto_coin_service.py
+    keygen/currencies/bee24_crypto_coin_service.py
 
 ...and register it in `keygen/crypto_coin_factory.py`:
 
-    from keygen.currencies.beekeeper_crypto_coin_service import BeekeeperCoinService
+    from keygen.currencies.bee24_crypto_coin_service import Bee24CoinService
     ...
-    'BEEKEEPER': BeekeeperCoinService,          # defaults to BTC
-    'BEEKEEPER-BTC': lambda: BeekeeperCoinService('BTC'),
-    'BEEKEEPER-LTC': lambda: BeekeeperCoinService('LTC'),
-    'BEEKEEPER-ETH': lambda: BeekeeperCoinService('ETH'),
+    'BEE24': Bee24CoinService,          # defaults to BTC
+    'BEE24-BTC': lambda: Bee24CoinService('BTC'),
+    'BEE24-LTC': lambda: Bee24CoinService('LTC'),
+    'BEE24-ETH': lambda: Bee24CoinService('ETH'),
 
 ------------------------------------------------------------------------------
 What makes Beekeeper different
@@ -35,7 +35,7 @@ engraves ONLY a 24-word BIP-39 mnemonic (256 bits of entropy). So:
 ------------------------------------------------------------------------------
 Standalone use (no keygen package required)
 ------------------------------------------------------------------------------
-    python beekeeper.py --count 10 --chain BTC --out ./out
+    python bee24.py --count 10 --chain BTC --out ./out
 
 Requires: bip_utils==1.7.0 (same pin as keygen-requirements.txt)
 """
@@ -141,7 +141,7 @@ def _is_valid_mnemonic(mnemonic: str) -> bool:
         return bool(Bip39MnemonicValidator(mnemonic).IsValid())  # 1.7.0
 
 
-class BeekeeperCoinService(CoinService):
+class Bee24CoinService(CoinService):
     """Cold Storage Coin whose only engraved secret is a 24-word seed phrase."""
 
     def __init__(self, chain: str = "BTC"):
@@ -178,7 +178,7 @@ class BeekeeperCoinService(CoinService):
         words = mnemonic.split(" ")
         if len(words) != WORDS_COUNT:
             raise ValueError(
-                "Beekeeper requires a {}-word seed phrase (got {}).".format(
+                "Beekeeper Bee24 requires a {}-word seed phrase (got {}).".format(
                     WORDS_COUNT, len(words)
                 )
             )
@@ -251,7 +251,7 @@ class BeekeeperCoinService(CoinService):
 #   public_file_name    -> labels.txt    address,assetId
 #   sequence_file_name  -> numbers.txt   <LASER><0000>
 #
-# Beekeeper writes the 24-word mnemonic into key.txt because that IS the
+# Beekeeper Bee24 writes the 24-word mnemonic into key.txt because that IS the
 # engraved secret. wif.txt is written as an extra convenience file for the
 # sweep/recovery tooling; the laser never reads it.
 # --------------------------------------------------------------------------
@@ -262,14 +262,14 @@ def _write(path: str, lines) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Beekeeper 24-word CSC keygen")
+    parser = argparse.ArgumentParser(description="Beekeeper Bee24 (24-word) CSC keygen")
     parser.add_argument("--count", type=int, default=10)
     parser.add_argument("--chain", default="BTC", choices=sorted(BEEKEEPER_CHAINS))
     parser.add_argument("--laser", default="A")
     parser.add_argument("--out", default="./out")
     args = parser.parse_args()
 
-    service = BeekeeperCoinService(args.chain)
+    service = Bee24CoinService(args.chain)
     coins = service.generate_list(args.count)
     os.makedirs(args.out, exist_ok=True)
     j = lambda name: os.path.join(args.out, name)  # noqa: E731
@@ -287,7 +287,7 @@ def main() -> None:
         j("numbers.txt"),
         ["{}{:04d}\n".format(args.laser.upper(), i) for i in range(len(coins))],
     )
-    print("Wrote {} Beekeeper {} coins to {}".format(len(coins), args.chain, args.out))
+    print("Wrote {} Beekeeper Bee24 {} coins to {}".format(len(coins), args.chain, args.out))
 
 
 
