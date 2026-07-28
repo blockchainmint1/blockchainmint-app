@@ -24,17 +24,30 @@ keygen/
 | method | purpose |
 | --- | --- |
 | `generate_list(count)` | make N coins |
-| `get_csv_header()` / `format(coin)` | the master `address.csv` |
+| `get_csv_header()` / `format(coin)` | the master CSV |
 | `generate_asset_id(coin)` | 6-char Asset ID (legacy: `address[1:7]`) |
 | `get_coin(private_key)` / `get_address(private_key)` | recovery + coin-checker |
 
-It writes five files: `address.csv`, asset IDs, private keys, public keys, and the
-laser sequence (`<LASER><0000>`).
+## The five output files (what the laser PC gets)
+
+`logic/coin_files_saver.py` writes to paths configured in `config.json` on the
+laser machine (`C:\Users\laser\Desktop\...`). The five keys and their standard
+filenames:
+
+| config.json key | file | contents (one line per coin) |
+| --- | --- | --- |
+| `base_file_name` | `keypair.txt` | CSV master: header + `wif,address,seed` |
+| `asset_id_file_name` | `snip.txt` | `Nv7Q8D` — 6-char Asset ID |
+| `private_file_name` | `key.txt` | the private key (WIF) |
+| `public_file_name` | `labels.txt` | `address,assetId` |
+| `sequence_file_name` | `numbers.txt` | `A0000`, `A0001`, … (`<LASER><0000>`) |
 
 ## What Beekeeper changes
 
-- The secret of record is the **mnemonic**, not a WIF. The CLI writes an extra
-  `seeds.txt` — that's the file the laser/print pipeline uses.
+- The secret of record is the **mnemonic**, not a WIF. `key.txt` therefore
+  contains the 24 words — that's the file the laser/print pipeline uses.
+  A `wif.txt` extra is written for the sweep/recovery tooling only.
+
 - Derivation is **standard BIP-44**: `m/44'/<slip44>'/0'/0/0`. The legacy BTC/LTC
   services derive from the BIP-44 *master* node, which is non-standard; a Beekeeper
   phrase must restore correctly in Electrum / Ledger / Trezor / Sparrow, so we

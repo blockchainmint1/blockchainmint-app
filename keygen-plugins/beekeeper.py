@@ -242,7 +242,18 @@ class BeekeeperCoinService(CoinService):
 
 
 # --------------------------------------------------------------------------
-# Standalone CLI — mirrors what KeygenProcessor writes out.
+# Standalone CLI — writes the SAME five files KeygenProcessor +
+# CoinFilesSaver produce on the laser PC desktop (config.json keys):
+#
+#   base_file_name      -> keypair.txt   CSV, one row per coin
+#   asset_id_file_name  -> snip.txt      6-char Asset ID per line
+#   private_file_name   -> key.txt       the engraved secret (Beekeeper: seed)
+#   public_file_name    -> labels.txt    address,assetId
+#   sequence_file_name  -> numbers.txt   <LASER><0000>
+#
+# Beekeeper writes the 24-word mnemonic into key.txt because that IS the
+# engraved secret. wif.txt is written as an extra convenience file for the
+# sweep/recovery tooling; the laser never reads it.
 # --------------------------------------------------------------------------
 
 def _write(path: str, lines) -> None:
@@ -263,13 +274,13 @@ def main() -> None:
     os.makedirs(args.out, exist_ok=True)
     j = lambda name: os.path.join(args.out, name)  # noqa: E731
 
-    _write(j("address.csv"), [service.get_csv_header()] + [service.format(c) for c in coins])
-    _write(j("asset_ids.txt"), ["{}\n".format(service.generate_asset_id(c)) for c in coins])
-    # Beekeeper engraves the SEED, not the WIF.
-    _write(j("seeds.txt"), ["{}\n".format(c.seed) for c in coins])
-    _write(j("private.txt"), ["{}\n".format(c.wif) for c in coins])
+    _write(j("keypair.txt"), [service.get_csv_header()] + [service.format(c) for c in coins])
+    _write(j("snip.txt"), ["{}\n".format(service.generate_asset_id(c)) for c in coins])
+    # Beekeeper engraves the SEED, so key.txt holds the mnemonic, not a WIF.
+    _write(j("key.txt"), ["{}\n".format(c.seed) for c in coins])
+    _write(j("wif.txt"), ["{}\n".format(c.wif) for c in coins])
     _write(
-        j("public.txt"),
+        j("labels.txt"),
         ["{},{}\n".format(c.address, service.generate_asset_id(c)) for c in coins],
     )
     _write(
@@ -277,6 +288,7 @@ def main() -> None:
         ["{}{:04d}\n".format(args.laser.upper(), i) for i in range(len(coins))],
     )
     print("Wrote {} Beekeeper {} coins to {}".format(len(coins), args.chain, args.out))
+
 
 
 if __name__ == "__main__":
