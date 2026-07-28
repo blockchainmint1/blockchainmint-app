@@ -96,3 +96,53 @@ Outputs the five laser files (`keypair.txt`, `snip.txt`, `key.txt`, `labels.txt`
 
 > Run key generation offline only. `key.txt` and `wif.txt` are the live
 > secrets — they never belong on a networked machine or in this repo.
+
+## TEXITcoin editions: `txc12.py` / `txc24.py`
+
+A seed phrase unlocks many chains, but a physical coin is minted for exactly
+one. `txc12.py` / `txc24.py` mint the TEXITcoin edition: the engraved secret is
+the 12- or 24-word mnemonic, and the sticker (`labels.txt`) carries the **TXC**
+address plus the 6-char Asset ID derived from that same seed.
+
+TXC mainnet params (from `chainparams.cpp`): PUBKEY_ADDRESS `0x42` (`T…`),
+SECRET_KEY `0xC1`. TXC has no registered SLIP-44 type, so derivation uses
+Bitcoin's path `m/44'/0'/0'/0/0` and re-encodes with TXC version bytes
+(override with `--coin-type` if that ever changes).
+
+Register as:
+
+```python
+from keygen.currencies.txc12_crypto_coin_service import Txc12CoinService
+from keygen.currencies.txc24_crypto_coin_service import Txc24CoinService
+
+'TXC12': Txc12CoinService,
+'TXC24': Txc24CoinService,
+```
+
+### Mint a batch
+
+```bash
+python txc24.py generate --count 100 --laser A --out ./out
+```
+
+Before writing anything the batch aborts if any two coins share a seed,
+address or Asset ID, and every coin is re-derived from its own words and
+checked against the address that will be printed.
+
+### QA station: scan coin, then scan sticker
+
+Step 4/5 of the mint process. Scan the laser-etched QR (the seed), then scan
+the printed sticker, and confirm they belong together before applying it:
+
+```bash
+# just show what the coin should be
+python txc24.py verify --seed "word word ... word"
+
+# compare against the scanned sticker (address[,assetId])
+python txc24.py verify --seed "word ... word" --sticker "T…,agGM2c"
+```
+
+Prints `MATCH` (exit 0) or `*** MISMATCH — DO NOT APPLY STICKER ***` (exit 1),
+so it can be wired straight into a scanner loop. Pass `--seed -` to read the
+words from stdin instead of the command line (keeps secrets out of shell
+history).
