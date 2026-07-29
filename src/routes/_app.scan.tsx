@@ -39,6 +39,7 @@ function ScanPage() {
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
   const [showQr, setShowQr] = useState(false);
+  const [assetIdMode, setAssetIdMode] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   const verifyFn = useServerFn(verifyMintRecord);
