@@ -123,8 +123,10 @@ function ScanPage() {
 
   function verifyScanned() {
     if (!scanned) return;
-    const target = scanned.type === "seed" ? scanned.result : scanned;
-    navigate({ to: "/verify/$chain/$address", params: { chain: target.type === "seed" ? "txc" : target.chain, address: target.address } });
+    const { chain: verifyChain, address: verifyAddress } = scanned.type === "seed"
+      ? { chain: "txc" as ChainId, address: scanned.result.address }
+      : { chain: scanned.chain, address: scanned.address };
+    navigate({ to: "/verify/$chain/$address", params: { chain: verifyChain, address: verifyAddress } });
   }
 
   function addDerivedTxc() {
