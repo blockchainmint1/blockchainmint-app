@@ -146,3 +146,17 @@ Prints `MATCH` (exit 0) or `*** MISMATCH — DO NOT APPLY STICKER ***` (exit 1),
 so it can be wired straight into a scanner loop. Pass `--seed -` to read the
 words from stdin instead of the command line (keeps secrets out of shell
 history).
+
+## Required: `get_currency_name()`
+
+`crypto_coin_factory.get_available_currencies()` builds the dropdown with
+`coin_services_class.get_currency_name()` — called on the **class**, before any
+instance exists. A plugin without it crashes the whole app at startup with:
+
+```
+AttributeError: type object 'Txc12CoinService' has no attribute 'get_currency_name'
+```
+
+All four plugins now expose `CURRENCY_NAME` plus classmethods
+`get_currency_name()` / `get_currency_symbol()` (`BEE12`, `BEE24`, `TXC12`,
+`TXC24`). Any new plugin must do the same.
