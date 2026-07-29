@@ -144,6 +144,19 @@ def _is_valid_mnemonic(mnemonic: str) -> bool:
 class Bee12CoinService(CoinService):
     """Cold Storage Coin whose only engraved secret is a 12-word seed phrase."""
 
+    # The factory calls these on the CLASS (no instance), so they must be
+    # static/class methods -- csc-manager's get_available_currencies() does
+    # `coin_services_class.get_currency_name()` while building the dropdown.
+    CURRENCY_NAME = "BEE12"
+
+    @classmethod
+    def get_currency_name(cls):
+        return cls.CURRENCY_NAME
+
+    @classmethod
+    def get_currency_symbol(cls):
+        return cls.CURRENCY_NAME
+
     def __init__(self, chain: str = "BTC"):
         chain = (chain or "BTC").upper()
         if chain not in BEEKEEPER_CHAINS:
