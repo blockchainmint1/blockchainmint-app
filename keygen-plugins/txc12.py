@@ -174,10 +174,46 @@ def _new_mnemonic() -> str:
 
 
 def _is_valid_mnemonic(mnemonic: str) -> bool:
+    """Works across every bip_utils API shape we've seen in the wild."""
+    # bip_utils 2.x: Bip39MnemonicValidator().IsValid(mnemonic) / .Validate(mnemonic)
     try:
-        return bool(Bip39MnemonicValidator().IsValid(mnemonic))  # 2.x
+        v = Bip39MnemonicValidator()
     except TypeError:
-        return bool(Bip39MnemonicValidator(mnemonic).IsValid())  # 1.7.0
+        v = None
+    if v is not None:
+        if hasattr(v, "IsValid"):
+            try:
+                return bool(v.IsValid(mnemonic))
+            except TypeError:
+                pass
+        if hasattr(v, "Validate"):
+            try:
+                v.Validate(mnemonic)
+                return True
+            except Exception:
+                return False
+    # bip_utils 1.7.0: Bip39MnemonicValidator(mnemonic).IsValid() / .Validate()
+    try:
+        v = Bip39MnemonicValidator(mnemonic)
+    except Exception:
+        return False
+    if hasattr(v, "IsValid"):
+        try:
+            return bool(v.IsValid())
+        except TypeError:
+            pass
+    if hasattr(v, "Validate"):
+        try:
+            v.Validate()
+            return True
+        except Exception:
+            return False
+    # Last resort: the seed generator itself validates the checksum.
+    try:
+        Bip39SeedGenerator(mnemonic).Generate()
+        return True
+    except Exception:
+        return False
 
 
 class Txc12CoinService(CoinService):
