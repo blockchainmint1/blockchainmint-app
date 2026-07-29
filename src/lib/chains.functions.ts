@@ -617,7 +617,7 @@ export const lookupAssetId = createServerFn({ method: "POST" })
     z.object({ assetId: z.string().trim().min(4).max(12) }).parse(input),
   )
   .handler(async ({ data }) => {
-    const { normalizeAssetId, addressForAssetId, lookupCoinDetails, cacheAssetId } =
+    const { normalizeAssetId, addressForAssetId, lookupByAssetId, cacheAssetId } =
       await import("./mintRegistry.server");
 
     const assetId = normalizeAssetId(data.assetId);
@@ -625,19 +625,37 @@ export const lookupAssetId = createServerFn({ method: "POST" })
       return { found: false as const, reason: "invalid" as const };
     }
 
+    // The registry resolves an Asset ID through the same coin-details endpoint.
+    const reg = await lookupByAssetId(assetId);
+    if (reg.found) {
+      const code = (reg.coin.blockchainCode || reg.coin.cryptoCurrency || "").toLowerCase();
+      const chain = (code in CHAINS ? code : "btc") as ChainId;
+      await cacheAssetId(chain, reg.coin.publicKey, reg.coin.assetId ?? assetId);
+      return {
+        found: true as const,
+        assetId: reg.coin.assetId ?? assetId,
+        chain,
+        address: reg.coin.publicKey,
+        authentic: true as const,
+        registry: reg.coin,
+      };
+    }
+
+    if (!reg.found && reg.reason === "unavailable") {
+      return { found: false as const, reason: "unavailable" as const, assetId, error: reg.error };
+    }
+
+    // Fallback: locally indexed coins (e.g. new mints not yet in the registry).
     const hit = await addressForAssetId(assetId);
     if (!hit) return { found: false as const, reason: "unknown" as const, assetId };
-
-    const reg = await lookupCoinDetails(hit.address);
-    if (reg.found) await cacheAssetId(hit.chain, hit.address, assetId);
 
     return {
       found: true as const,
       assetId,
       chain: hit.chain as ChainId,
       address: hit.address,
-      authentic: reg.found,
-      registry: reg.found ? reg.coin : null,
+      authentic: false as const,
+      registry: null,
     };
   });
 
