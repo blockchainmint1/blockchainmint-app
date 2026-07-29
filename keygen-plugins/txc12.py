@@ -27,8 +27,8 @@ exactly ONE chain. Txc12 mints the TEXITcoin edition:
 TEXITcoin mainnet params (chainparams.cpp, blockchainmint1/texitcoin):
     PUBKEY_ADDRESS = 66 (0x42, "T…")   SCRIPT_ADDRESS = 5 (0x05)
     SECRET_KEY     = 193 (0xC1)        bech32 hrp     = "txc"
-TXC has no registered SLIP-44 coin type, so it derives on Bitcoin's path
-(m/44'/0'/0'/0/0) and re-encodes the key material with TXC version bytes.
+TEXITcoin's registered SLIP-44 coin type is 696969, so keys derive at
+m/44'/696969'/0'/0/0 -- the same path the TXC web wallet uses.
 Override with --coin-type if that ever changes.
 
 ------------------------------------------------------------------------------
@@ -109,7 +109,7 @@ WORDS_COUNT = 12
 # TEXITcoin mainnet version bytes.
 TXC_PUBKEY_VERSION = 0x42   # 66 -> "T…" legacy P2PKH
 TXC_SECRET_VERSION = 0xC1   # 193 -> WIF
-TXC_DEFAULT_COIN_TYPE = 0   # derives on Bitcoin's SLIP-44 path
+TXC_DEFAULT_COIN_TYPE = 696969   # TEXITcoin's registered SLIP-44 coin type
 
 
 # --------------------------------------------------------------------------
@@ -216,6 +216,21 @@ def _is_valid_mnemonic(mnemonic: str) -> bool:
         return False
 
 
+
+def _derive_node(seed_bytes, coin_type: int):
+    """Derive m/44'/<coin_type>'/0'/0/0 across bip_utils versions.
+
+    Bip44Coins.BITCOIN hardcodes coin type 0, so TXC (SLIP-44 696969) has to
+    come off a raw BIP-32 path instead.
+    """
+    path = "m/44'/{}'/0'/0/0".format(int(coin_type))
+    try:  # bip_utils >= 2.x
+        from bip_utils import Bip32Slip10Secp256k1 as _Bip32
+    except ImportError:  # bip_utils 1.7.0
+        from bip_utils import Bip32 as _Bip32
+    return _Bip32.FromSeedAndPath(seed_bytes, path)
+
+
 class Txc12CoinService(CoinService):
     """TEXITcoin Cold Storage Coin whose engraved secret is 12 seed words."""
 
@@ -267,14 +282,7 @@ class Txc12CoinService(CoinService):
             raise ValueError("Invalid BIP-39 seed phrase (checksum failed).")
 
         seed_bytes = Bip39SeedGenerator(mnemonic).Generate()
-        node = (
-            Bip44.FromSeed(seed_bytes, Bip44Coins.BITCOIN)
-            .Purpose()
-            .Coin()
-            .Account(0)
-            .Change(Bip44Changes.CHAIN_EXT)
-            .AddressIndex(0)
-        )
+        node = _derive_node(seed_bytes, self.coin_type)
         priv32 = node.PrivateKey().Raw().ToBytes()
         pub = node.PublicKey().RawCompressed().ToBytes()
         # csc-manager writes coin.wif into key.txt (the engraved secret), so the
@@ -418,7 +426,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="TEXITcoin Txc12 (12-word) CSC keygen")
     parser.add_argument(
         "--coin-type", type=int, default=TXC_DEFAULT_COIN_TYPE,
-        help="SLIP-44 coin type used in the derivation path (default 0)",
+        help="SLIP-44 coin type used in the derivation path (default 696969)",
     )
     sub = parser.add_subparsers(dest="command")
 

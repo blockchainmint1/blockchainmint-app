@@ -22,9 +22,10 @@ import { base58check } from "@scure/base";
 // TEXITcoin mainnet params (chainparams.cpp: PUBKEY_ADDRESS = 66 = 0x42).
 const TXC_PUBKEY_VERSION = 0x42;
 
-// TXC has no registered SLIP-44 coin type, so the keygen plugins derive on
-// Bitcoin's path (coin type 0) and re-encode with TXC version bytes.
-const TXC_DERIVATION_PATH = "m/44'/0'/0'/0/0";
+// TEXITcoin's registered SLIP-44 coin type is 696969 (see texitcoin.org/build
+// and the TXC web wallet). Legacy P2PKH (T…) accounts derive on BIP-44.
+export const TXC_COIN_TYPE = 696969;
+const TXC_DERIVATION_PATH = `m/44'/${TXC_COIN_TYPE}'/0'/0/0`;
 
 export type SeedParseResult = {
   ok: true;
