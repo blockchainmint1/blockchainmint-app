@@ -277,9 +277,11 @@ class Txc24CoinService(CoinService):
         )
         priv32 = node.PrivateKey().Raw().ToBytes()
         pub = node.PublicKey().RawCompressed().ToBytes()
-        return CryptoCoin(
-            txc_address_from_pubkey(pub), txc_wif_from_privkey(priv32), mnemonic
-        )
+        # csc-manager writes coin.wif into key.txt (the engraved secret), so the
+        # mnemonic goes there. The real WIF lives on .private_key for sweeps.
+        coin = CryptoCoin(txc_address_from_pubkey(pub), mnemonic, mnemonic)
+        coin.private_key = txc_wif_from_privkey(priv32)
+        return coin
 
     def verify_pair(self, mnemonic: str, sticker_address: str, sticker_asset_id=None):
         """QA step: does the scanned sticker belong to the scanned coin?
@@ -317,7 +319,8 @@ class Txc24CoinService(CoinService):
 
     def format(self, coin: CryptoCoin) -> str:
         return '"{}",{},{},{}\n'.format(
-            coin.seed, coin.address, coin.wif, self.derivation_path()
+            coin.seed, coin.address, getattr(coin, "private_key", ""),
+            self.derivation_path(),
         )
 
     def generate_asset_id(self, coin: CryptoCoin) -> str:
@@ -371,7 +374,7 @@ def _cmd_generate(args) -> int:
     _write(j("snip.txt"), ["{}\n".format(a) for a in asset_ids])
     # The engraved secret is the mnemonic, not a WIF.
     _write(j("key.txt"), ["{}\n".format(c.seed) for c in coins])
-    _write(j("wif.txt"), ["{}\n".format(c.wif) for c in coins])
+    _write(j("wif.txt"), ["{}\n".format(getattr(c, "private_key", "")) for c in coins])
     # labels.txt is what gets printed on the sticker: public key + Asset ID.
     _write(
         j("labels.txt"),
