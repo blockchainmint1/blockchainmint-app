@@ -274,6 +274,9 @@ function ScanPage() {
                 </div>
               </div>
 
+              <AuthenticityBadge chain={scanned.chain} address={scanned.address} />
+
+
               <button
                 onClick={() => setShowQr(v => !v)}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
