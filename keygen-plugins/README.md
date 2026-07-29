@@ -1,13 +1,15 @@
-# Beekeeper keygen plugins (bee12 / bee24)
+# Seed-phrase keygen plugins (eth12 / eth24 / txc12 / txc24)
 
-Beekeeper is the Cold Storage Coin series whose only engraved secret is a BIP-39
-seed phrase. There are two variants, one file each — identical behaviour apart
-from the phrase length:
+These are the Cold Storage Coin series whose only engraved secret is a BIP-39
+seed phrase. Two chains, two phrase lengths each — identical behaviour apart
+from the chain and the word count:
 
-| File | Class | Words | Entropy |
-| --- | --- | --- | --- |
-| `bee12.py` | `Bee12CoinService` | 12 | 128-bit |
-| `bee24.py` | `Bee24CoinService` | 24 | 256-bit |
+| File | Class | Chain | Words | Entropy |
+| --- | --- | --- | --- | --- |
+| `eth12.py` | `Eth12CoinService` | ETH / all EVM | 12 | 128-bit |
+| `eth24.py` | `Eth24CoinService` | ETH / all EVM | 24 | 256-bit |
+| `txc12.py` | `Txc12CoinService` | TEXITcoin | 12 | 128-bit |
+| `txc24.py` | `Txc24CoinService` | TEXITcoin | 24 | 256-bit |
 
 ## How the existing keygen works
 
@@ -31,7 +33,7 @@ keygen/
 | --- | --- |
 | `generate_list(count)` | make N coins |
 | `get_csv_header()` / `format(coin)` | the master CSV |
-| `generate_asset_id(coin)` | 6-char Asset ID (legacy: `address[1:7]`) |
+| `generate_asset_id(coin)` | 6-char Asset ID |
 | `get_coin(private_key)` / `get_address(private_key)` | recovery + coin-checker |
 
 ## The five output files (what the laser PC gets)
@@ -42,42 +44,43 @@ filenames:
 
 | config.json key | file | contents (one line per coin) |
 | --- | --- | --- |
-| `base_file_name` | `keypair.txt` | CSV master: header + `wif,address,seed` |
+| `base_file_name` | `keypair.txt` | CSV master: header + `seed,address,key,derivation` |
 | `asset_id_file_name` | `snip.txt` | `Nv7Q8D` — 6-char Asset ID |
-| `private_file_name` | `key.txt` | the private key (WIF) |
-| `public_file_name` | `labels.txt` | `address,assetId` |
+| `private_file_name` | `key.txt` | **the seed phrase only** (what gets etched) |
+| `public_file_name` | `labels.txt` | `address,assetId` (what gets printed) |
 | `sequence_file_name` | `numbers.txt` | `A0000`, `A0001`, … (`<LASER><0000>`) |
 
-## What Beekeeper changes
+A `wif.txt` extra (WIF for TXC, `0x…` hex for ETH) is written for the
+sweep/recovery tooling only — it is not part of the laser pipeline.
 
-- The secret of record is the **mnemonic**, not a WIF. `key.txt` therefore
-  contains the words (12 or 24) — that's the file the laser/print pipeline uses.
-  A `wif.txt` extra is written for the sweep/recovery tooling only.
+## What these plugins change vs. the legacy services
 
-- Derivation is **standard BIP-44**: `m/44'/<slip44>'/0'/0/0`. The legacy BTC/LTC
-  services derive from the BIP-44 *master* node, which is non-standard; a Beekeeper
-  phrase must restore correctly in Electrum / Ledger / Trezor / Sparrow, so we
-  deliberately don't copy that behaviour.
-- `CryptoCoin.wif` is still populated (derived account-0 key, hex for ETH) so the
-  existing recovery and sweep tooling keeps working untouched.
-- Chains supported: BTC, LTC, DOGE, BCH, DASH, ETH.
+- The secret of record is the **mnemonic**, not a WIF. `key.txt` contains only
+  the words (12 or 24).
+- Derivation is **standard BIP-44**: ETH on `m/44'/60'/0'/0/0` (matches
+  MetaMask / Ledger Live / Rainbow, and every EVM chain), TXC on
+  `m/44'/0'/0'/0/0`. The legacy BTC/LTC services derive from the BIP-44
+  *master* node, which is non-standard; these phrases must restore correctly in
+  mainstream wallets, so we deliberately don't copy that behaviour.
+- `CryptoCoin.wif` is still populated so existing recovery/sweep tooling works.
+- Asset ID: TXC uses `address[1:7]` (after the leading `T`), ETH uses
+  `address[2:8]` uppercased (after `0x`).
 
 ## Install into the keygen package
 
-Copy the files to `keygen/currencies/bee12_crypto_coin_service.py` and
-`keygen/currencies/bee24_crypto_coin_service.py`, then register them in
+Copy the files into `keygen/currencies/` and register them in
 `keygen/crypto_coin_factory.py`:
 
 ```python
-from keygen.currencies.bee12_crypto_coin_service import Bee12CoinService
-from keygen.currencies.bee24_crypto_coin_service import Bee24CoinService
+from keygen.currencies.eth12_crypto_coin_service import Eth12CoinService
+from keygen.currencies.eth24_crypto_coin_service import Eth24CoinService
+from keygen.currencies.txc12_crypto_coin_service import Txc12CoinService
+from keygen.currencies.txc24_crypto_coin_service import Txc24CoinService
 
-'BEE12':     Bee12CoinService,                  # BTC by default
-'BEE12-LTC': lambda: Bee12CoinService('LTC'),
-'BEE12-ETH': lambda: Bee12CoinService('ETH'),
-'BEE24':     Bee24CoinService,
-'BEE24-LTC': lambda: Bee24CoinService('LTC'),
-'BEE24-ETH': lambda: Bee24CoinService('ETH'),
+'ETH12': Eth12CoinService,
+'ETH24': Eth24CoinService,
+'TXC12': Txc12CoinService,
+'TXC24': Txc24CoinService,
 ```
 
 Add the new currencies to `get_available_currencies()` so they appear in the
@@ -87,65 +90,36 @@ keygen widget's dropdown.
 
 ```bash
 pip install bip_utils          # 1.7.0 pin and 2.x are both supported
-python bee24.py --count 100 --chain BTC --laser A --out ./out
-python bee12.py --count 100 --chain BTC --laser A --out ./out
-```
-
-Outputs the five laser files (`keypair.txt`, `snip.txt`, `key.txt`, `labels.txt`,
-`numbers.txt`) plus `wif.txt`.
-
-> Run key generation offline only. `key.txt` and `wif.txt` are the live
-> secrets — they never belong on a networked machine or in this repo.
-
-## TEXITcoin editions: `txc12.py` / `txc24.py`
-
-A seed phrase unlocks many chains, but a physical coin is minted for exactly
-one. `txc12.py` / `txc24.py` mint the TEXITcoin edition: the engraved secret is
-the 12- or 24-word mnemonic, and the sticker (`labels.txt`) carries the **TXC**
-address plus the 6-char Asset ID derived from that same seed.
-
-TXC mainnet params (from `chainparams.cpp`): PUBKEY_ADDRESS `0x42` (`T…`),
-SECRET_KEY `0xC1`. TXC has no registered SLIP-44 type, so derivation uses
-Bitcoin's path `m/44'/0'/0'/0/0` and re-encodes with TXC version bytes
-(override with `--coin-type` if that ever changes).
-
-Register as:
-
-```python
-from keygen.currencies.txc12_crypto_coin_service import Txc12CoinService
-from keygen.currencies.txc24_crypto_coin_service import Txc24CoinService
-
-'TXC12': Txc12CoinService,
-'TXC24': Txc24CoinService,
-```
-
-### Mint a batch
-
-```bash
-python txc24.py generate --count 100 --laser A --out ./out
+python eth24.py generate --count 100 --laser A --out ./out
+python txc12.py generate --count 100 --laser A --out ./out
 ```
 
 Before writing anything the batch aborts if any two coins share a seed,
 address or Asset ID, and every coin is re-derived from its own words and
 checked against the address that will be printed.
 
-### QA station: scan coin, then scan sticker
+> Run key generation offline only. `key.txt` and `wif.txt` are the live
+> secrets — they never belong on a networked machine or in this repo.
+
+## QA station: scan coin, then scan sticker
 
 Step 4/5 of the mint process. Scan the laser-etched QR (the seed), then scan
 the printed sticker, and confirm they belong together before applying it:
 
 ```bash
 # just show what the coin should be
-python txc24.py verify --seed "word word ... word"
+python eth24.py verify --seed "word word ... word"
 
 # compare against the scanned sticker (address[,assetId])
+python eth24.py verify --seed "word ... word" --sticker "0x839E…,839ECF"
 python txc24.py verify --seed "word ... word" --sticker "T…,agGM2c"
 ```
 
 Prints `MATCH` (exit 0) or `*** MISMATCH — DO NOT APPLY STICKER ***` (exit 1),
 so it can be wired straight into a scanner loop. Pass `--seed -` to read the
 words from stdin instead of the command line (keeps secrets out of shell
-history).
+history). EVM addresses compare case-insensitively, so a non-checksummed
+sticker scan still matches.
 
 ## Required: `get_currency_name()`
 
@@ -157,6 +131,6 @@ instance exists. A plugin without it crashes the whole app at startup with:
 AttributeError: type object 'Txc12CoinService' has no attribute 'get_currency_name'
 ```
 
-All four plugins now expose `CURRENCY_NAME` plus classmethods
-`get_currency_name()` / `get_currency_symbol()` (`BEE12`, `BEE24`, `TXC12`,
+All four plugins expose `CURRENCY_NAME` plus classmethods
+`get_currency_name()` / `get_currency_symbol()` (`ETH12`, `ETH24`, `TXC12`,
 `TXC24`). Any new plugin must do the same.
