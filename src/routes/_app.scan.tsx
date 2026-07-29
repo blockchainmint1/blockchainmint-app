@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { verifyMintRecord } from "@/lib/chains.functions";
+import { verifyMintRecord, lookupAssetId } from "@/lib/chains.functions";
 import { CHAIN_OPTIONS, CHAINS, cscId, type ChainId } from "@/lib/chains";
-import { ShieldCheck, Coins, Keyboard, QrCode, CheckCircle2, XCircle, ScanLine } from "lucide-react";
+import { ShieldCheck, Coins, Keyboard, QrCode, CheckCircle2, XCircle, ScanLine, Hash, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { QrScanner } from "@/components/QrScanner";
 import { parseCoinPayload, detectChain } from "@/lib/parseCoinPayload";
