@@ -183,6 +183,19 @@ def _is_valid_mnemonic(mnemonic: str) -> bool:
 class Txc12CoinService(CoinService):
     """TEXITcoin Cold Storage Coin whose engraved secret is 12 seed words."""
 
+    # The factory calls these on the CLASS (no instance), so they must be
+    # static/class methods -- csc-manager's get_available_currencies() does
+    # `coin_services_class.get_currency_name()` while building the dropdown.
+    CURRENCY_NAME = "TXC12"
+
+    @classmethod
+    def get_currency_name(cls):
+        return cls.CURRENCY_NAME
+
+    @classmethod
+    def get_currency_symbol(cls):
+        return cls.CURRENCY_NAME
+
     chain = "TXC"
 
     def __init__(self, coin_type: int = TXC_DEFAULT_COIN_TYPE):
