@@ -186,7 +186,7 @@ export async function buildAndSignSweep(input: BuildSweepInput): Promise<BuildSw
       : legacyPreimage(utxos, i, inputScript, outputScript, amountOut, params.sighashAll);
     const hash = dsha256(preimage);
     const sig = secp256k1.sign(hash, privKey, { lowS: true });
-    const der = sig.toDERRawBytes();
+    const der = sig.toBytes("der");
     signatures.push(new Uint8Array([...der, params.sighashAll]));
   }
 
