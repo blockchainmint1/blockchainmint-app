@@ -486,7 +486,9 @@ function AssetIdLookup({
         toast.error(
           res.reason === "invalid"
             ? "Coin IDs are 6 characters (letters and numbers)."
-            : "We don't have a coin with that ID yet. Scan its QR code once and it'll be searchable.",
+            : res.reason === "unavailable"
+              ? "Couldn't reach the mint registry — try again in a moment."
+              : "No coin with that ID in the mint registry. Double-check the characters (they're case-sensitive).",
         );
         return;
       }
