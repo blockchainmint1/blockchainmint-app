@@ -568,6 +568,19 @@ export const verifyMintRecord = createServerFn({ method: "POST" })
     z.object({ chain: ChainIdSchema, address: z.string().min(8).max(120) }).parse(input),
   )
   .handler(async ({ data }) => {
+    // 1. Authoritative source: the Blockchain Mint manufacturing registry.
+    const { lookupCoinDetails } = await import("./mintRegistry.server");
+    const reg = await lookupCoinDetails(data.address);
+    if (reg.found) {
+      return {
+        authentic: true as const,
+        source: "registry" as const,
+        registry: reg.coin,
+        displayValues: reg.displayValues,
+      };
+    }
+
+    // 2. Fallback: locally curated verification_records table.
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(
       process.env.SUPABASE_URL!,
@@ -580,9 +593,22 @@ export const verifyMintRecord = createServerFn({ method: "POST" })
       .eq("chain", data.chain)
       .eq("address", data.address)
       .maybeSingle();
-    if (error) return { authentic: false as const, error: error.message };
-    if (!rec)  return { authentic: false as const };
-    return { authentic: true as const, record: rec };
+    if (rec) return { authentic: true as const, source: "local" as const, record: rec };
+
+    if (reg.reason === "unavailable") {
+      return { authentic: false as const, unavailable: true as const, error: reg.error };
+    }
+    return { authentic: false as const, error: error?.message };
+  });
+
+/** Mark a manufactured coin as activated in the Blockchain Mint registry. */
+export const activateMintCoin = createServerFn({ method: "POST" })
+  .inputValidator((input: { address: string }) =>
+    z.object({ address: z.string().min(8).max(120) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { activateCoin } = await import("./mintRegistry.server");
+    return activateCoin(data.address);
   });
 
 // ---------- Authenticated: watched_addresses ------------------------------

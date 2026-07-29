@@ -48,9 +48,26 @@ function VerifyPage() {
             <ShieldCheck className="mx-auto size-8 text-primary" />
             <p className="mt-2 font-serif text-xl text-foreground">Authentic</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              This address is in the Blockchain Mint registry.
+              {"registry" in verify && verify.source === "registry"
+                ? "This coin is in the Blockchain Mint manufacturing registry."
+                : "This address is in the Blockchain Mint registry."}
             </p>
-            {verify.record && (
+
+            {"registry" in verify && verify.registry && (
+              <dl className="mt-4 space-y-1 text-left text-xs">
+                {verify.registry.assetId && <Row label="Asset ID">{verify.registry.assetId}</Row>}
+                {verify.registry.blockchainName && <Row label="Blockchain">{verify.registry.blockchainName}</Row>}
+                {verify.registry.cryptoCurrency && <Row label="Currency">{verify.registry.cryptoCurrency}</Row>}
+                {verify.registry.activationStatus != null && (
+                  <Row label="Status">{verify.registry.activationStatus ? "Activated" : "Not activated"}</Row>
+                )}
+                {verify.displayValues?.map(d => (
+                  <Row key={d.fieldTitle} label={d.fieldTitle}>{d.fieldValue}</Row>
+                ))}
+              </dl>
+            )}
+
+            {"record" in verify && verify.record && (
               <dl className="mt-4 space-y-1 text-left text-xs">
                 {verify.record.serial && <Row label="Serial">{verify.record.serial}</Row>}
                 {verify.record.mint_year && <Row label="Minted">{verify.record.mint_year}</Row>}
@@ -59,16 +76,25 @@ function VerifyPage() {
               </dl>
             )}
           </div>
+        ) : verify && "unavailable" in verify && verify.unavailable ? (
+          <div className="rounded-xl border border-accent/40 bg-accent/5 p-5 text-center">
+            <ShieldAlert className="mx-auto size-8 text-accent" />
+            <p className="mt-2 font-serif text-xl text-foreground">Registry unreachable</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              We couldn't reach the Blockchain Mint registry right now. This doesn't mean the coin is fake — try again shortly.
+            </p>
+          </div>
         ) : (
           <div className="rounded-xl border border-accent/40 bg-accent/5 p-5 text-center">
             <ShieldAlert className="mx-auto size-8 text-accent" />
-            <p className="mt-2 font-serif text-xl text-foreground">Registry lookup not available yet — coming soon!</p>
+            <p className="mt-2 font-serif text-xl text-foreground">Not in the mint registry</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              We're still connecting the Blockchain Mint registry. You can still watch this coin and check its balance.
+              This address isn't a coin we manufactured. It's still a valid blockchain address — you can watch it and check its balance.
             </p>
           </div>
         )}
       </div>
+
 
       {summary && (
         <div className="mt-6 rounded-xl border border-border bg-card p-4">
