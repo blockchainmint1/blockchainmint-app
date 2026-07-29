@@ -128,9 +128,14 @@ export function assetIdForAddress(address: string): string | null {
   return a.slice(1, 7).toUpperCase();
 }
 
+/**
+ * Asset IDs are base58 slices of the address, so they are MIXED CASE
+ * ("yEh4Mc") — never upper-case them. The registry itself matches
+ * case-insensitively, but we keep the user's characters intact.
+ */
 export function normalizeAssetId(raw: string): string | null {
-  const v = raw.trim().replace(/\s+/g, "").toUpperCase();
-  return /^[0-9A-Z]{6}$/.test(v) ? v : null;
+  const v = raw.trim().replace(/\s+/g, "");
+  return /^[0-9A-Za-z]{6}$/.test(v) ? v : null;
 }
 
 /** Remember address <-> Asset ID so the sticker number can be looked up later. */
