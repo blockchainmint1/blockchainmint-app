@@ -391,6 +391,7 @@ export type Database = {
       verification_records: {
         Row: {
           address: string
+          asset_id: string | null
           chain: Database["public"]["Enums"]["chain_id"]
           created_at: string
           denomination: string | null
@@ -403,6 +404,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          asset_id?: string | null
           chain: Database["public"]["Enums"]["chain_id"]
           created_at?: string
           denomination?: string | null
@@ -415,6 +417,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          asset_id?: string | null
           chain?: Database["public"]["Enums"]["chain_id"]
           created_at?: string
           denomination?: string | null

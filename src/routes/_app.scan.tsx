@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { verifyMintRecord } from "@/lib/chains.functions";
+import { verifyMintRecord, lookupAssetId } from "@/lib/chains.functions";
 import { CHAIN_OPTIONS, CHAINS, cscId, type ChainId } from "@/lib/chains";
-import { ShieldCheck, Coins, Keyboard, QrCode, CheckCircle2, XCircle, ScanLine } from "lucide-react";
+import { ShieldCheck, Coins, Keyboard, QrCode, CheckCircle2, XCircle, ScanLine, Hash, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { QrScanner } from "@/components/QrScanner";
 import { parseCoinPayload, detectChain } from "@/lib/parseCoinPayload";
@@ -39,6 +39,7 @@ function ScanPage() {
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
   const [showQr, setShowQr] = useState(false);
+  const [assetIdMode, setAssetIdMode] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   const verifyFn = useServerFn(verifyMintRecord);
@@ -172,6 +173,9 @@ function ScanPage() {
                 Asset ID <span className="text-foreground">{scanned.result.assetId}</span>
               </p>
 
+              <AuthenticityBadge chain="txc" address={scanned.result.address} />
+
+
               <button
                 onClick={() => setShowQr(v => !v)}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
@@ -271,6 +275,9 @@ function ScanPage() {
                 </div>
               </div>
 
+              <AuthenticityBadge chain={scanned.chain} address={scanned.address} />
+
+
               <button
                 onClick={() => setShowQr(v => !v)}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
@@ -319,11 +326,25 @@ function ScanPage() {
               <Keyboard className="size-3.5" /> Enter address manually
             </button>
           )}
+          {!scanned && (
+            <button
+              onClick={() => { setManual(true); setAssetIdMode(true); }}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              <Hash className="size-3.5" /> Add by 6-digit Coin ID
+            </button>
+          )}
         </>
       )}
 
       {manual && (
         <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+          <AssetIdLookup
+            open={assetIdMode}
+            onToggle={() => setAssetIdMode(v => !v)}
+            onResolved={(c, a) => { setChain(c); setAddress(a); setAssetIdMode(false); }}
+          />
+
           <label className="block">
             <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Chain</span>
             <select
@@ -378,6 +399,142 @@ function ScanPage() {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Checks a scanned public key against the Blockchain Mint registry and shows
+ * an "Authentic" badge the moment it comes back.
+ */
+function AuthenticityBadge({ chain, address }: { chain: ChainId; address: string }) {
+  const verifyFn = useServerFn(verifyMintRecord);
+  const { data, isLoading } = useQuery({
+    queryKey: ["mint-verify", chain, address],
+    queryFn: () => verifyFn({ data: { chain, address } }),
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-xs text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" /> Checking the mint registry…
+      </div>
+    );
+  }
+  if (!data) return null;
+
+  if (data.authentic) {
+    const assetId = "assetId" in data ? data.assetId : null;
+    return (
+      <div className="mt-3 rounded-lg border border-green-500/40 bg-green-500/10 px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="size-5 text-green-500" />
+          <p className="text-sm font-semibold text-green-600">Authentic Blockchain Mint coin</p>
+        </div>
+        {assetId && (
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Asset ID <span className="text-foreground">{assetId}</span>
+          </p>
+        )}
+        {"registry" in data && data.registry?.blockchainName && (
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            {data.registry.blockchainName}
+            {data.registry.activationStatus === false ? " — not yet activated" : ""}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if ("unavailable" in data && data.unavailable) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2.5 text-xs text-muted-foreground">
+        <ShieldAlert className="size-4 text-accent" /> Registry unreachable — try again shortly.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5">
+      <XCircle className="size-5 text-destructive" />
+      <p className="text-xs font-medium text-destructive">
+        Not found in the mint registry — this isn't a coin we manufactured.
+      </p>
+    </div>
+  );
+}
+
+/** Manual entry of the six-digit Coin ID printed on the sticker. */
+function AssetIdLookup({
+  open,
+  onToggle,
+  onResolved,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onResolved: (chain: ChainId, address: string) => void;
+}) {
+  const [value, setValue] = useState("");
+  const lookupFn = useServerFn(lookupAssetId);
+
+  const lookup = useMutation({
+    mutationFn: () => lookupFn({ data: { assetId: value } }),
+    onSuccess: res => {
+      if (!res.found) {
+        toast.error(
+          res.reason === "invalid"
+            ? "Coin IDs are 6 characters (letters and numbers)."
+            : "We don't have a coin with that ID yet. Scan its QR code once and it'll be searchable.",
+        );
+        return;
+      }
+      onResolved(res.chain, res.address);
+      toast.success(res.authentic ? "Authentic coin found." : "Coin found.");
+    },
+    onError: e => toast.error((e as Error).message),
+  });
+
+  if (!open) {
+    return (
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+      >
+        <Hash className="size-3.5" /> Look up by 6-digit Coin ID
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        Coin ID (6 characters on the sticker)
+      </span>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          inputMode="text"
+          autoCapitalize="characters"
+          maxLength={6}
+          value={value}
+          onChange={e => setValue(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ""))}
+          placeholder="A1B2C3"
+          className="w-full rounded-md border border-input bg-background px-3 py-2.5 text-center font-mono text-lg tracking-[0.3em] focus:border-ring focus:outline-none"
+        />
+        <button
+          disabled={value.length !== 6 || lookup.isPending}
+          onClick={() => lookup.mutate()}
+          className="flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {lookup.isPending ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
+          Find
+        </button>
+      </div>
+      <button onClick={onToggle} className="mt-2 w-full text-center text-[11px] text-muted-foreground hover:text-foreground">
+        Cancel
+      </button>
     </div>
   );
 }

@@ -108,3 +108,57 @@ export async function activateCoin(publicKey: string): Promise<{ ok: boolean; me
     clearTimeout(t);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Asset ID index
+//
+// The registry API only accepts a public key — there is no Asset ID endpoint.
+// Asset IDs are deterministic though: the six characters after the address's
+// leading network character (or after `0x` on EVM), exactly as the keygen
+// plugins print them onto the sticker. We keep a local index in
+// `verification_records` so a user can type the six digits from the sticker,
+// and it self-populates every time a coin verifies against the registry.
+// ---------------------------------------------------------------------------
+
+/** Six-character Asset ID as printed on the sticker for this address. */
+export function assetIdForAddress(address: string): string | null {
+  const a = address.trim();
+  if (/^0x[0-9a-fA-F]{40}$/.test(a)) return a.slice(2, 8).toUpperCase();
+  if (a.length < 8) return null;
+  return a.slice(1, 7).toUpperCase();
+}
+
+export function normalizeAssetId(raw: string): string | null {
+  const v = raw.trim().replace(/\s+/g, "").toUpperCase();
+  return /^[0-9A-Z]{6}$/.test(v) ? v : null;
+}
+
+/** Remember address <-> Asset ID so the sticker number can be looked up later. */
+export async function cacheAssetId(chain: string, address: string, assetId: string | null) {
+  if (!assetId) return;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("verification_records")
+      .upsert({ chain: chain as never, address, asset_id: assetId }, { onConflict: "chain,address" });
+  } catch {
+    // Index caching is best-effort; never fail a verification because of it.
+  }
+}
+
+/** Resolve a six-digit Asset ID to a known coin address. */
+export async function addressForAssetId(
+  assetId: string,
+): Promise<{ chain: string; address: string } | null> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
+  const { data } = await supabase
+    .from("verification_records")
+    .select("chain,address")
+    .ilike("asset_id", assetId)
+    .limit(1)
+    .maybeSingle();
+  return data ? { chain: data.chain as string, address: data.address as string } : null;
+}

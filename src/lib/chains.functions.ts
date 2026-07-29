@@ -569,12 +569,15 @@ export const verifyMintRecord = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     // 1. Authoritative source: the Blockchain Mint manufacturing registry.
-    const { lookupCoinDetails } = await import("./mintRegistry.server");
+    const { lookupCoinDetails, assetIdForAddress, cacheAssetId } = await import("./mintRegistry.server");
     const reg = await lookupCoinDetails(data.address);
     if (reg.found) {
+      const assetId = reg.coin.assetId || assetIdForAddress(data.address);
+      await cacheAssetId(data.chain, data.address, assetId);
       return {
         authentic: true as const,
         source: "registry" as const,
+        assetId,
         registry: reg.coin,
         displayValues: reg.displayValues,
       };
@@ -589,16 +592,53 @@ export const verifyMintRecord = createServerFn({ method: "POST" })
     );
     const { data: rec, error } = await supabase
       .from("verification_records")
-      .select("chain,address,serial,mint_year,denomination,metal,product_slug,notes")
+      .select("chain,address,asset_id,serial,mint_year,denomination,metal,product_slug,notes")
       .eq("chain", data.chain)
       .eq("address", data.address)
       .maybeSingle();
-    if (rec) return { authentic: true as const, source: "local" as const, record: rec };
+    if (rec) {
+      return {
+        authentic: true as const,
+        source: "local" as const,
+        assetId: rec.asset_id ?? assetIdForAddress(data.address),
+        record: rec,
+      };
+    }
 
     if (reg.reason === "unavailable") {
       return { authentic: false as const, unavailable: true as const, error: reg.error };
     }
     return { authentic: false as const, error: error?.message };
+  });
+
+/** Resolve the six-digit Asset ID printed on a coin sticker to its address. */
+export const lookupAssetId = createServerFn({ method: "POST" })
+  .inputValidator((input: { assetId: string }) =>
+    z.object({ assetId: z.string().trim().min(4).max(12) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { normalizeAssetId, addressForAssetId, lookupCoinDetails, cacheAssetId } =
+      await import("./mintRegistry.server");
+
+    const assetId = normalizeAssetId(data.assetId);
+    if (!assetId) {
+      return { found: false as const, reason: "invalid" as const };
+    }
+
+    const hit = await addressForAssetId(assetId);
+    if (!hit) return { found: false as const, reason: "unknown" as const, assetId };
+
+    const reg = await lookupCoinDetails(hit.address);
+    if (reg.found) await cacheAssetId(hit.chain, hit.address, assetId);
+
+    return {
+      found: true as const,
+      assetId,
+      chain: hit.chain as ChainId,
+      address: hit.address,
+      authentic: reg.found,
+      registry: reg.found ? reg.coin : null,
+    };
   });
 
 /** Mark a manufactured coin as activated in the Blockchain Mint registry. */
