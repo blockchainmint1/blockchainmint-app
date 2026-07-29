@@ -172,6 +172,9 @@ function ScanPage() {
                 Asset ID <span className="text-foreground">{scanned.result.assetId}</span>
               </p>
 
+              <AuthenticityBadge chain="txc" address={scanned.result.address} />
+
+
               <button
                 onClick={() => setShowQr(v => !v)}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
