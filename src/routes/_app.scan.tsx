@@ -518,11 +518,13 @@ function AssetIdLookup({
         <input
           type="text"
           inputMode="text"
-          autoCapitalize="characters"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           maxLength={6}
           value={value}
-          onChange={e => setValue(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ""))}
-          placeholder="A1B2C3"
+          onChange={e => setValue(e.target.value.replace(/[^0-9A-Za-z]/g, ""))}
+          placeholder="yEh4Mc"
           className="w-full rounded-md border border-input bg-background px-3 py-2.5 text-center font-mono text-lg tracking-[0.3em] focus:border-ring focus:outline-none"
         />
         <button
