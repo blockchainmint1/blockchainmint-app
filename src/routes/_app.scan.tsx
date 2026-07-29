@@ -486,7 +486,9 @@ function AssetIdLookup({
         toast.error(
           res.reason === "invalid"
             ? "Coin IDs are 6 characters (letters and numbers)."
-            : "We don't have a coin with that ID yet. Scan its QR code once and it'll be searchable.",
+            : res.reason === "unavailable"
+              ? "Couldn't reach the mint registry — try again in a moment."
+              : "No coin with that ID in the mint registry. Double-check the characters (they're case-sensitive).",
         );
         return;
       }
@@ -516,11 +518,13 @@ function AssetIdLookup({
         <input
           type="text"
           inputMode="text"
-          autoCapitalize="characters"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           maxLength={6}
           value={value}
-          onChange={e => setValue(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, ""))}
-          placeholder="A1B2C3"
+          onChange={e => setValue(e.target.value.replace(/[^0-9A-Za-z]/g, ""))}
+          placeholder="yEh4Mc"
           className="w-full rounded-md border border-input bg-background px-3 py-2.5 text-center font-mono text-lg tracking-[0.3em] focus:border-ring focus:outline-none"
         />
         <button

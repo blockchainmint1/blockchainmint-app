@@ -125,12 +125,30 @@ export function assetIdForAddress(address: string): string | null {
   const a = address.trim();
   if (/^0x[0-9a-fA-F]{40}$/.test(a)) return a.slice(2, 8).toUpperCase();
   if (a.length < 8) return null;
-  return a.slice(1, 7).toUpperCase();
+  // base58 addresses keep their original casing ("1yEh4Mc…" -> "yEh4Mc").
+  return a.slice(1, 7);
 }
 
+/**
+ * Look a coin up by the 6-character Asset ID printed on the sticker.
+ *
+ * The legacy app (src/components/ModalAddWalletManually.tsx) posts whatever the
+ * user typed — Asset ID or full public key — into the SAME `publicKey` field of
+ * /v5/coin-details. The registry resolves both, so there is no separate
+ * Asset ID endpoint and no local index is needed.
+ */
+export async function lookupByAssetId(assetId: string): Promise<RegistryLookup> {
+  return lookupCoinDetails(assetId);
+}
+
+/**
+ * Asset IDs are base58 slices of the address, so they are MIXED CASE
+ * ("yEh4Mc") — never upper-case them. The registry itself matches
+ * case-insensitively, but we keep the user's characters intact.
+ */
 export function normalizeAssetId(raw: string): string | null {
-  const v = raw.trim().replace(/\s+/g, "").toUpperCase();
-  return /^[0-9A-Z]{6}$/.test(v) ? v : null;
+  const v = raw.trim().replace(/\s+/g, "");
+  return /^[0-9A-Za-z]{6}$/.test(v) ? v : null;
 }
 
 /** Remember address <-> Asset ID so the sticker number can be looked up later. */
