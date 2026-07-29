@@ -325,11 +325,25 @@ function ScanPage() {
               <Keyboard className="size-3.5" /> Enter address manually
             </button>
           )}
+          {!scanned && (
+            <button
+              onClick={() => { setManual(true); setAssetIdMode(true); }}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              <Hash className="size-3.5" /> Add by 6-digit Coin ID
+            </button>
+          )}
         </>
       )}
 
       {manual && (
         <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+          <AssetIdLookup
+            open={assetIdMode}
+            onToggle={() => setAssetIdMode(v => !v)}
+            onResolved={(c, a) => { setChain(c); setAddress(a); setAssetIdMode(false); }}
+          />
+
           <label className="block">
             <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Chain</span>
             <select
