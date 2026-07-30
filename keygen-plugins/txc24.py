@@ -231,6 +231,89 @@ def _derive_node(seed_bytes, coin_type: int):
     return _Bip32.FromSeedAndPath(seed_bytes, path)
 
 
+
+# ---------------------------------------------------------------------------
+# Scanner tolerance: rebuild a mnemonic whose spaces got eaten
+# ---------------------------------------------------------------------------
+# Keyboard-wedge / QR scanners emit the space key as a non-character key event
+# ("'Key' object has no attribute 'char'"), so the scanned seed arrives as one
+# run-on string. We re-split it against the BIP-39 English wordlist and keep
+# only the reading whose checksum validates.
+
+_WORDLIST_CACHE = None
+
+
+def _english_wordlist():
+    global _WORDLIST_CACHE
+    if _WORDLIST_CACHE is not None:
+        return _WORDLIST_CACHE
+    words = []
+    try:
+        import os as _os
+        import bip_utils as _bu
+        for root, _dirs, files in _os.walk(_os.path.dirname(_bu.__file__)):
+            if "english.txt" in files:
+                with open(_os.path.join(root, "english.txt"), "r", encoding="utf-8") as fh:
+                    words = [w.strip() for w in fh if w.strip()]
+                break
+    except Exception:
+        words = []
+    if len(words) != 2048:
+        try:
+            from mnemonic import Mnemonic as _Mnemonic
+            words = list(_Mnemonic("english").wordlist)
+        except Exception:
+            pass
+    _WORDLIST_CACHE = words if len(words) == 2048 else []
+    return _WORDLIST_CACHE
+
+
+def _split_runon_mnemonic(blob, words_count):
+    """All ways to cut `blob` into exactly `words_count` BIP-39 words."""
+    wordset = set(_english_wordlist())
+    if not wordset:
+        return []
+    n = len(blob)
+    results = []
+
+    def walk(pos, acc):
+        if len(results) > 8:
+            return
+        if len(acc) == words_count:
+            if pos == n:
+                results.append(list(acc))
+            return
+        for size in range(3, 9):
+            if pos + size > n:
+                break
+            word = blob[pos:pos + size]
+            if word in wordset:
+                acc.append(word)
+                walk(pos + size, acc)
+                acc.pop()
+
+    walk(0, [])
+    return results
+
+
+def _normalize_mnemonic(raw, words_count):
+    text = " ".join(str(raw).replace("\u00a0", " ").strip().lower().split())
+    if len(text.split(" ")) == words_count:
+        return text
+    blob = "".join(ch for ch in text if ch.isalpha())
+    if blob and len(text.split(" ")) < words_count:
+        valid = [c for c in _split_runon_mnemonic(blob, words_count)
+                 if _is_valid_mnemonic(" ".join(c))]
+        if len(valid) == 1:
+            return " ".join(valid[0])
+        if len(valid) > 1:
+            raise ValueError(
+                "Scanned seed has no spaces and splits {} different valid ways. "
+                "Re-scan or type the words.".format(len(valid))
+            )
+    return text
+
+
 class Txc24CoinService(CoinService):
     """TEXITcoin Cold Storage Coin whose engraved secret is 24 seed words."""
 
@@ -270,7 +353,7 @@ class Txc24CoinService(CoinService):
         return self.get_coin(private_key).address
 
     def get_coin_from_mnemonic(self, mnemonic: str) -> CryptoCoin:
-        mnemonic = " ".join(str(mnemonic).strip().lower().split())
+        mnemonic = _normalize_mnemonic(mnemonic, WORDS_COUNT)
         words = mnemonic.split(" ")
         if len(words) != WORDS_COUNT:
             raise ValueError(

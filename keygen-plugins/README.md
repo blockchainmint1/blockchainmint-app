@@ -121,6 +121,18 @@ words from stdin instead of the command line (keeps secrets out of shell
 history). EVM addresses compare case-insensitively, so a non-checksummed
 sticker scan still matches.
 
+### Run-on seeds from barcode/QR scanners
+
+Keyboard-wedge scanners in the laser room emit the space bar as a non-character
+key event (`'Key' object has no attribute 'char'`), so the seed arrives as one
+long word: `rulepapersizeseekfitlizardsidescorpioncomepolicelazywant`. Every
+plugin now re-splits that against the BIP-39 English wordlist and keeps only
+the reading whose checksum validates, so scanning still yields the right
+address. If a run-on string somehow splits into more than one valid mnemonic,
+the plugin refuses instead of guessing. The real fix is still to make the
+scanner emit spaces (handle `keyboard.Key.space` alongside `key.char`).
+
+
 ## Required: `get_currency_name()`
 
 `crypto_coin_factory.get_available_currencies()` builds the dropdown with
