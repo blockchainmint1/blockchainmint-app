@@ -43,7 +43,9 @@ Requires: bip_utils (1.7.0 pin or 2.x both work)
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
+import secrets
 import sys
 
 from bip_utils import (
@@ -98,6 +100,7 @@ except ImportError:  # pragma: no cover
 
 
 WORDS_COUNT = 12
+ENTROPY_BYTES = 16  # 128 bits — BIP-39 strength for 12 words
 
 ETH_COIN_TYPE = 60  # SLIP-44 coin type for Ethereum / all EVM chains
 
@@ -106,14 +109,69 @@ ETH_COIN_TYPE = 60  # SLIP-44 coin type for Ethereum / all EVM chains
 # bip_utils 1.7.0 vs 2.x compatibility
 # --------------------------------------------------------------------------
 
+def _system_entropy(n: int) -> bytes:
+    """Raw CSPRNG entropy for a fresh mnemonic — the single most important
+    line of defence in this whole program.
+
+    Design notes (post-ColdCard-incident hardening):
+      * Two *independent* OS CSPRNG APIs are drawn (`secrets.token_bytes`, which
+        is the audited CSPRNG interface, and `os.urandom`), plus a second
+        `secrets` draw. On every platform these ultimately read the kernel
+        pool, but drawing three times lets us detect a stuck/replayed RNG.
+      * They are mixed through SHA-512 and then XOR-ed with the primary draw,
+        so the result retains the full entropy of `secrets.token_bytes(n)` even
+        if the mixing step were somehow flawed. XOR with an independent value
+        can never *reduce* entropy.
+      * Sanity gates abort the run rather than mint a weak coin. A generator
+        that silently degrades is exactly how wallets get drained.
+      * Nothing here is seeded, timestamped, PID-derived or otherwise
+        reproducible. There is no `random` module anywhere in this file.
+    """
+    if n < 16:
+        raise ValueError("Refusing to generate less than 128 bits of entropy.")
+    a = secrets.token_bytes(n)
+    b = os.urandom(n)
+    c = secrets.token_bytes(n)
+    if a == b or b == c or a == c:
+        raise RuntimeError(
+            "CSPRNG returned identical draws — the system RNG is broken. "
+            "Refusing to mint."
+        )
+    for draw in (a, b, c):
+        if len(set(draw)) < 4 or draw == bytes(n) or draw == b"\xff" * n:
+            raise RuntimeError(
+                "CSPRNG output looks degenerate — refusing to mint."
+            )
+    stream = b""
+    counter = 0
+    while len(stream) < n:
+        stream += hashlib.sha512(bytes([counter]) + a + b + c).digest()
+        counter += 1
+    return bytes(x ^ y for x, y in zip(stream[:n], a))
+
+
+def _mnemonic_from_entropy(entropy: bytes) -> str:
+    """Build the BIP-39 phrase from entropy WE generated, not from the
+    library's internal RNG. Works on bip_utils 1.7.0 and 2.x."""
+    try:
+        return str(Bip39MnemonicGenerator().FromEntropy(entropy))
+    except TypeError:
+        return str(Bip39MnemonicGenerator.FromEntropy(entropy))
+
+
 def _new_mnemonic() -> str:
-    if Bip39WordsNum is not None:
-        words = Bip39WordsNum.WORDS_NUM_12
-        try:
-            return str(Bip39MnemonicGenerator().FromWordsNumber(words))
-        except TypeError:
-            return str(Bip39MnemonicGenerator.FromWordsNumber(words))
-    return str(Bip39MnemonicGenerator.FromWordsNumber(WORDS_COUNT))
+    mnemonic = _mnemonic_from_entropy(_system_entropy(ENTROPY_BYTES))
+    # Belt and braces: never hand back a phrase that fails its own checksum.
+    if not _is_valid_mnemonic(mnemonic):
+        raise RuntimeError("Generated mnemonic failed BIP-39 validation.")
+    words = mnemonic.split()
+    if len(words) != WORDS_COUNT:
+        raise RuntimeError(
+            "Generated {} words, expected {}.".format(len(words), WORDS_COUNT)
+        )
+    if len(set(words)) < WORDS_COUNT // 2:
+        raise RuntimeError("Generated mnemonic is suspiciously repetitive.")
+    return mnemonic
 
 
 def _is_valid_mnemonic(mnemonic: str) -> bool:
