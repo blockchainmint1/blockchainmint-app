@@ -24,6 +24,9 @@ python3 -m pip download --no-deps --no-binary :all: \
   -d ~/cscmint-offline-packages crcmod
 ```
 
+`pywin32-ctypes` (a Windows-only PyInstaller dependency) also ships as a
+pure-Python wheel, so it can be downloaded on a Mac and installed on Windows.
+
 `crcmod` arrives as a `.tar.gz`. That's fine — it falls back to a pure-Python
 build when no C compiler is present.
 
