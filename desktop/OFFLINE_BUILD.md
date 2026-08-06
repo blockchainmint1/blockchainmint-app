@@ -18,7 +18,7 @@ python3 -m pip download \
   pyinstaller altgraph macholib packaging pyinstaller-hooks-contrib setuptools wheel \
   "bip_utils==2.12.1" "cbor2<6.0.0" coincurve ecdsa ed25519-blake2b-fork \
   pycryptodome pynacl py-sr25519-bindings pytoniq-core-fork typing_extensions \
-  cffi pycparser pefile
+  cffi pycparser pefile pywin32-ctypes
 
 python3 -m pip download --no-deps --no-binary :all: \
   -d ~/cscmint-offline-packages crcmod
