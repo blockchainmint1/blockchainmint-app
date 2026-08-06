@@ -94,3 +94,29 @@ def on_press(self, key):
 
 CSC Mint sidesteps it entirely — a QR/wedge scanner types straight into a
 normal text box, spaces and all, and run-on strings get repaired anyway.
+
+## "pygame.error: WASAPI can't find requested audio endpoint"
+
+That crash comes from the **old** `csc-manager.py`, not from CSC Mint. Line 13
+calls `pygame.mixer.init()` for its beep sounds; on a PC with no audio device
+(or with the Windows Audio service off — common on a freshly imaged airgapped
+box) WASAPI has no endpoint and pygame raises before the GUI ever opens.
+
+Three ways out, best first:
+
+1. **Use CSC Mint instead.** It has no pygame, no audio, no `pynput`, and no
+   network. `CSCMint.exe` will start on that machine as-is.
+2. **Patch the old app** — make the mixer optional:
+
+   ```python
+   try:
+       pygame.mixer.init()
+   except pygame.error:
+       pass          # no audio device on this box; beeps disabled
+   ```
+
+   Every later `pygame.mixer.Sound(...).play()` needs the same guard, or set a
+   `SOUND_OK = False` flag and check it before playing.
+3. **Give Windows a fake audio endpoint** — enable the "Windows Audio" service
+   (`services.msc`), or install a virtual audio driver. Works, but you're
+   installing extra software on an airgapped mint station to hear a beep.
