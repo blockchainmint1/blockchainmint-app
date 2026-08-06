@@ -18,11 +18,14 @@ python3 -m pip download \
   pyinstaller altgraph macholib packaging pyinstaller-hooks-contrib setuptools wheel \
   "bip_utils==2.12.1" "cbor2<6.0.0" coincurve ecdsa ed25519-blake2b-fork \
   pycryptodome pynacl py-sr25519-bindings pytoniq-core-fork typing_extensions \
-  cffi pycparser pefile
+  cffi pycparser pefile pywin32-ctypes
 
 python3 -m pip download --no-deps --no-binary :all: \
   -d ~/cscmint-offline-packages crcmod
 ```
+
+`pywin32-ctypes` (a Windows-only PyInstaller dependency) also ships as a
+pure-Python wheel, so it can be downloaded on a Mac and installed on Windows.
 
 `crcmod` arrives as a `.tar.gz`. That's fine — it falls back to a pure-Python
 build when no C compiler is present.
