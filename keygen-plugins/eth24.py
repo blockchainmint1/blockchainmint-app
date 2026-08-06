@@ -135,7 +135,7 @@ def _health_check(data: bytes, what: str) -> None:
     if max(data.count(b) for b in set(data)) > max(3, n // 3):
         raise RuntimeError("{} is skewed toward one value — refusing to mint.".format(what))
 
-    # Bit balance: a healthy sample sits near 50%% ones. Wide window so this
+    # Bit balance: a healthy sample sits near 50% ones. Wide window so this
     # only ever fires on genuinely broken hardware, never on luck.
     ones = sum(bin(b).count("1") for b in data)
     bits = n * 8
