@@ -165,45 +165,115 @@ def txc_wif_from_privkey(priv32: bytes, compressed: bool = True) -> str:
 # bip_utils 1.7.0 vs 2.x compatibility
 # --------------------------------------------------------------------------
 
+# --- entropy health testing (NIST SP 800-90B flavoured) -------------------
+
+_SYSRAND = secrets.SystemRandom()
+_SEEN_DRAWS = set()
+_SEEN_ENTROPY = set()
+
+
+def _health_check(data: bytes, what: str) -> None:
+    """Abort loudly on output that looks like a degraded RNG."""
+    n = len(data)
+    if data == bytes(n) or data == b"\xff" * n:
+        raise RuntimeError("{} is all-constant — refusing to mint.".format(what))
+    if len(set(data)) < max(4, n // 4):
+        raise RuntimeError("{} has too few distinct bytes — refusing to mint.".format(what))
+
+    # Repetition count test: no byte may repeat back-to-back too many times.
+    run = 1
+    for prev, cur in zip(data, data[1:]):
+        run = run + 1 if cur == prev else 1
+        if run > 4:
+            raise RuntimeError("{} has a stuck-byte run — refusing to mint.".format(what))
+
+    # Adaptive proportion test: no single byte value may dominate the sample.
+    if max(data.count(b) for b in set(data)) > max(3, n // 3):
+        raise RuntimeError("{} is skewed toward one value — refusing to mint.".format(what))
+
+    # Bit balance: a healthy sample sits near 50% ones. Wide window so this
+    # only ever fires on genuinely broken hardware, never on luck.
+    ones = sum(bin(b).count("1") for b in data)
+    bits = n * 8
+    if not (0.25 * bits <= ones <= 0.75 * bits):
+        raise RuntimeError("{} has implausible bit balance — refusing to mint.".format(what))
+
+
 def _system_entropy(n: int) -> bytes:
     """Raw CSPRNG entropy for a fresh mnemonic — the single most important
     line of defence in this whole program.
 
-    Design notes (post-ColdCard-incident hardening):
-      * Two *independent* OS CSPRNG APIs are drawn (`secrets.token_bytes`, which
-        is the audited CSPRNG interface, and `os.urandom`), plus a second
-        `secrets` draw. On every platform these ultimately read the kernel
-        pool, but drawing three times lets us detect a stuck/replayed RNG.
-      * They are mixed through SHA-512 and then XOR-ed with the primary draw,
-        so the result retains the full entropy of `secrets.token_bytes(n)` even
-        if the mixing step were somehow flawed. XOR with an independent value
-        can never *reduce* entropy.
-      * Sanity gates abort the run rather than mint a weak coin. A generator
-        that silently degrades is exactly how wallets get drained.
+    Design notes (post-ColdCard-incident hardening, pass 2):
+      * FOUR independent draws from the OS CSPRNG are taken through every
+        distinct API Python exposes: `secrets.token_bytes` (the audited
+        interface), `os.urandom`, `os.getrandom` where the platform has it
+        (blocks until the kernel pool is actually seeded — the exact failure
+        ColdCard shipped), and `random.SystemRandom` (a separate code path to
+        the same kernel source).
+      * Every draw is run through NIST SP 800-90B style health tests before it
+        is used: a repetition-count test, an adaptive-proportion test and a
+        byte-uniqueness floor. Any failure aborts the whole run.
+      * Draws are compared against each other AND against every draw made
+        earlier in this process, so a stuck or replaying RNG is caught even if
+        it only repeats once in a thousand coins.
+      * They are mixed through SHA-512 (counter-personalised, so the extractor
+        never repeats a block) and the result is XOR-ed with the primary draw.
+        XOR with an independent value can never *reduce* entropy, so the output
+        is at least as strong as `secrets.token_bytes(n)` no matter what the
+        mixing step does.
+      * The final output is health-tested too, and is refused if it collides
+        with anything this process already emitted.
       * Nothing here is seeded, timestamped, PID-derived or otherwise
-        reproducible. There is no `random` module anywhere in this file.
+        reproducible. There is no seeded `random` anywhere in this file.
     """
     if n < 16:
         raise ValueError("Refusing to generate less than 128 bits of entropy.")
-    a = secrets.token_bytes(n)
-    b = os.urandom(n)
-    c = secrets.token_bytes(n)
-    if a == b or b == c or a == c:
-        raise RuntimeError(
-            "CSPRNG returned identical draws — the system RNG is broken. "
-            "Refusing to mint."
-        )
-    for draw in (a, b, c):
-        if len(set(draw)) < 4 or draw == bytes(n) or draw == b"\xff" * n:
+
+    draws = [secrets.token_bytes(n), os.urandom(n)]
+    getrandom = getattr(os, "getrandom", None)
+    if getrandom is not None:
+        try:
+            # Blocks until the kernel CSPRNG is fully seeded (Linux/BSD).
+            draws.append(bytes(getrandom(n)))
+        except (OSError, NotImplementedError):  # pragma: no cover - platform
+            pass
+    draws.append(
+        _SYSRAND.getrandbits(n * 8).to_bytes(n, "big")
+    )
+    draws.append(secrets.token_bytes(n))
+
+    for draw in draws:
+        _health_check(draw, "CSPRNG draw")
+    for i, x in enumerate(draws):
+        for y in draws[i + 1:]:
+            if x == y:
+                raise RuntimeError(
+                    "CSPRNG returned identical draws — the system RNG is "
+                    "broken. Refusing to mint."
+                )
+    for draw in draws:
+        if draw in _SEEN_DRAWS:
             raise RuntimeError(
-                "CSPRNG output looks degenerate — refusing to mint."
+                "CSPRNG replayed a value seen earlier in this session — "
+                "refusing to mint."
             )
+        _SEEN_DRAWS.add(draw)
+
+    joined = b"".join(draws)
     stream = b""
     counter = 0
     while len(stream) < n:
-        stream += hashlib.sha512(bytes([counter]) + a + b + c).digest()
+        stream += hashlib.sha512(
+            b"blockchainmint/csc-keygen/v2" + counter.to_bytes(4, "big") + joined
+        ).digest()
         counter += 1
-    return bytes(x ^ y for x, y in zip(stream[:n], a))
+    out = bytes(x ^ y for x, y in zip(stream[:n], draws[0]))
+
+    _health_check(out, "mixed entropy")
+    if out in _SEEN_ENTROPY:
+        raise RuntimeError("Entropy collision within this session — aborting.")
+    _SEEN_ENTROPY.add(out)
+    return out
 
 
 def _mnemonic_from_entropy(entropy: bytes) -> str:
