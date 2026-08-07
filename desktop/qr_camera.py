@@ -36,6 +36,30 @@ def available() -> bool:
     return _cv2 is not None
 
 
+def diagnostics() -> str:
+    """Return a human-readable report of camera readiness."""
+    lines = []
+    if _cv2 is None:
+        lines.append("OpenCV: NOT loaded")
+        lines.append("Camera scanning: UNAVAILABLE in this build")
+        lines.append("Details: {}".format(_import_error or "unknown import error"))
+        lines.append("USB keyboard-wedge scanners still work.")
+        return "\n".join(lines)
+
+    lines.append("OpenCV: loaded (cv2 present)")
+    try:
+        lines.append("OpenCV version: {}".format(_cv2.__version__))
+    except Exception:
+        pass
+    found = list_cameras()
+    if found:
+        lines.append("Cameras detected: {}".format(", ".join("#{}".format(i) for i in found)))
+    else:
+        lines.append("Cameras detected: NONE")
+        lines.append("If a webcam is plugged in, try changing the camera # or reconnecting it.")
+    return "\n".join(lines)
+
+
 def unavailable_reason() -> str:
     return (
         "OpenCV isn't installed in this build, so the camera can't be used.\n\n"
