@@ -381,6 +381,8 @@ class VerifyTab(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.cam_session = None
+        self._auto_clear_after = None
+        self._last_verdict = None  # None, "match", "mismatch"
 
         top = ttk.Frame(self)
         top.pack(fill="x", padx=12, pady=(12, 4))
@@ -392,7 +394,7 @@ class VerifyTab(ttk.Frame):
         ).pack(side="left", padx=8)
         self.auto_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
-            top, text="Auto-verify when the sticker scan lands", variable=self.auto_var
+            top, text="Auto-advance on MATCH", variable=self.auto_var
         ).pack(side="left", padx=16)
 
         cam = ttk.Frame(self)
@@ -436,10 +438,11 @@ class VerifyTab(ttk.Frame):
         tk.Button(row, text="VERIFY", font=HUGE, bg="#0d47a1", fg="white",
                   activebackground="#1565c0", activeforeground="white",
                   height=1, command=self.verify).pack(side="left", expand=True, fill="x")
-        tk.Button(row, text="CLEAR / NEXT COIN", font=BIG, height=2,
+        tk.Button(row, text="CLEAR / NEXT COIN  (space)", font=BIG, height=2,
                   command=self.clear).pack(side="left", padx=(10, 0))
 
-        self.banner = tk.Label(self, text="waiting for a scan…", font=HUGE,
+        # Big verdict banner — high contrast so the operator sees it from across the table.
+        self.banner = tk.Label(self, text="waiting for a scan…", font=GIANT,
                                bg="#333", fg="white", height=2)
         self.banner.pack(fill="x", padx=12)
 
@@ -448,6 +451,11 @@ class VerifyTab(ttk.Frame):
 
         if not qr_camera.available():
             self.cam_status.config(text="no camera support in this build (USB scanner still works)")
+
+        # Spacebar clears the verdict and moves to the next coin (hands-free workflow).
+        for widget in (self, self.banner, self.seed_entry, self.sticker_entry, self.detail):
+            widget.bind("<Key-space>", self._on_space)
+        # Seed box also accepts Enter to jump to sticker; sticker box already verifies on Enter.
 
         self.after(200, lambda: self.seed_entry.focus_set())
 
