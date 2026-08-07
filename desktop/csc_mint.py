@@ -138,10 +138,28 @@ def load_services(directory=None):
     return out, errors
 
 
+def detect_service_label(services, seed_text: str, sticker_address: str) -> str | None:
+    """Pick the right plugin from seed word count + sticker address format."""
+    words = len(seed_text.strip().split())
+    if words not in (12, 24):
+        return None
+    addr = sticker_address.strip().lower()
+    if addr.startswith("0x"):
+        chain = "ETH"
+    elif addr.startswith("t") or addr.startswith("txc:") or addr.startswith("bitcoincash:"):
+        chain = "TXC"
+    else:
+        return None
+    for label, _cls, _mod in services:
+        if chain in label and str(words) in label:
+            return label
+    return None
+
 
 # --------------------------------------------------------------------------
 # GUI
 # --------------------------------------------------------------------------
+
 
 BIG = ("Segoe UI", 12)
 HUGE = ("Segoe UI", 22, "bold")
