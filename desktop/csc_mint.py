@@ -41,6 +41,13 @@ import datetime
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
+# Webcam QR scanning (optional — falls back to USB keyboard-wedge scanners).
+try:
+    from . import qr_camera  # type: ignore
+except Exception:  # running as a script or frozen by PyInstaller
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import qr_camera  # type: ignore
+
 APP_TITLE = "CSC Mint — Blockchain Mint keygen / QA station"
 
 # --------------------------------------------------------------------------
@@ -491,6 +498,9 @@ class VerifyTab(ttk.Frame):
         return "break"
 
     def clear(self):
+        if self.cam_session is not None:
+            self.cam_session.stop()
+            self.cam_session = None
         self.seed_entry.delete("1.0", "end")
         self.sticker_var.set("")
         self.detail.delete("1.0", "end")
