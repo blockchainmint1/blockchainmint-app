@@ -58,25 +58,58 @@ PLUGIN_FILES = [
 ]
 
 
-def plugin_dir() -> str:
-    base = getattr(sys, "_MEIPASS", None)
-    if base:
-        cand = os.path.join(base, "keygen-plugins")
-        if os.path.isdir(cand):
-            return cand
+def _candidate_dirs():
+    """Every place the plugin .py files might live, in priority order."""
+    cands = []
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        cands += [
+            os.path.join(meipass, "keygen-plugins"),
+            os.path.join(meipass, "_internal", "keygen-plugins"),
+            meipass,
+        ]
+    # Folder the .exe (or script) actually sits in
+    if getattr(sys, "frozen", False):
+        exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+    else:
+        exe_dir = os.path.dirname(os.path.abspath(__file__))
     here = os.path.dirname(os.path.abspath(__file__))
-    for cand in (
-        os.path.join(here, "keygen-plugins"),
-        os.path.join(os.path.dirname(here), "keygen-plugins"),
-    ):
-        if os.path.isdir(cand):
+    for base in (exe_dir, here, os.getcwd()):
+        cands += [
+            os.path.join(base, "keygen-plugins"),
+            os.path.join(os.path.dirname(base), "keygen-plugins"),
+            base,
+        ]
+    # de-dupe, preserve order
+    seen, out = set(), []
+    for c in cands:
+        c = os.path.normpath(c)
+        if c not in seen:
+            seen.add(c)
+            out.append(c)
+    return out
+
+
+# Set once a folder is confirmed (or chosen by the user).
+_PLUGIN_DIR = None
+
+
+def plugin_dir() -> str:
+    global _PLUGIN_DIR
+    if _PLUGIN_DIR:
+        return _PLUGIN_DIR
+    for cand in _candidate_dirs():
+        if os.path.isdir(cand) and any(
+            os.path.isfile(os.path.join(cand, f)) for _l, f, _c in PLUGIN_FILES
+        ):
+            _PLUGIN_DIR = cand
             return cand
-    return here
+    return _candidate_dirs()[0]
 
 
-def load_services():
+def load_services(directory=None):
     """Import each plugin file by path and pull out its CoinService class."""
-    d = plugin_dir()
+    d = directory or plugin_dir()
     out = []
     errors = []
     for label, filename, classname in PLUGIN_FILES:
@@ -94,6 +127,7 @@ def load_services():
         except Exception as exc:  # pragma: no cover
             errors.append("{}: {}".format(filename, exc))
     return out, errors
+
 
 
 # --------------------------------------------------------------------------
