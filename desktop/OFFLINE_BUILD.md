@@ -102,7 +102,9 @@ copy /y ..\keygen-plugins\*.py keygen-plugins\
 
 python -m PyInstaller --noconfirm --clean --onefile --windowed --name CSCMint ^
   --add-data "keygen-plugins;keygen-plugins" ^
-  --collect-all bip_utils --collect-all coincurve ^
+  --collect-all bip_utils --collect-all coincurve --collect-binaries coincurve ^
+  --hidden-import coincurve --hidden-import coincurve._cffi_backend ^
+  --hidden-import _cffi_backend --hidden-import cffi ^
   --hidden-import Cryptodome --hidden-import Crypto ^
   --hidden-import crcmod --hidden-import ecdsa --hidden-import nacl ^
   --hidden-import bitarray --hidden-import cbor2 ^
@@ -151,3 +153,21 @@ Use `py -3.11 -m pip ...` and `py -3.11 -m PyInstaller ...` instead.
 - Nothing about the build embeds secrets — the same `.exe` is safe to rebuild
   and re-copy at any time.
 
+
+**`ModuleNotFoundError: No module named 'coincurve._cffi_backend'`** when you
+run the exe — `coincurve` is a compiled CFFI extension, and PyInstaller's static
+analysis can't see the `.pyd` it loads at runtime. Rebuild with:
+
+```batch
+  --collect-all coincurve --collect-binaries coincurve ^
+  --hidden-import coincurve --hidden-import coincurve._cffi_backend ^
+  --hidden-import _cffi_backend --hidden-import cffi ^
+```
+
+Make sure `coincurve` and `cffi` are actually installed first
+(`python -m pip install --no-index --find-links E:\cscmint-offline-packages coincurve cffi`)
+and that you grabbed the **win_amd64** wheels, not the macOS ones.
+
+If you still can't get the wheel onto the offline PC, `bip_utils` falls back to
+the pure-Python `ecdsa` backend — the addresses it derives are identical, just
+slower. Install `ecdsa` and rebuild without the coincurve flags.

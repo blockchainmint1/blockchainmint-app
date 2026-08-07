@@ -45,7 +45,7 @@ if errorlevel 1 goto :fail
 REM ---- install dependencies ------------------------------------------------
 echo.
 echo [4/4] Installing pyinstaller and bip_utils ...
-"%PY_DIR%\python.exe" -m pip install --no-warn-script-location pyinstaller bip_utils
+"%PY_DIR%\python.exe" -m pip install --no-warn-script-location pyinstaller bip_utils coincurve cffi
 if errorlevel 1 goto :fail
 
 REM ---- build the exe -------------------------------------------------------
@@ -66,6 +66,9 @@ if not exist "%~dp0keygen-plugins\txc24.py" (
   --name CSCMint ^
   --add-data "keygen-plugins;keygen-plugins" ^
   --collect-all bip_utils ^
+  --collect-all coincurve --collect-binaries coincurve ^
+  --hidden-import coincurve --hidden-import coincurve._cffi_backend ^
+  --hidden-import _cffi_backend --hidden-import cffi ^
   --distpath "%DIST_DIR%" ^
   --workpath "%BUILD_DIR%\pyi-work" ^
   csc_mint.py
