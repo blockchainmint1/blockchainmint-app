@@ -45,7 +45,7 @@ if errorlevel 1 goto :fail
 REM ---- install dependencies ------------------------------------------------
 echo.
 echo [4/4] Installing pyinstaller and bip_utils ...
-"%PY_DIR%\python.exe" -m pip install --no-warn-script-location pyinstaller bip_utils coincurve cffi
+"%PY_DIR%\python.exe" -m pip install --no-warn-script-location pyinstaller bip_utils coincurve cffi opencv-python numpy
 if errorlevel 1 goto :fail
 
 REM ---- build the exe -------------------------------------------------------

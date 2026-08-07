@@ -22,9 +22,11 @@ Two tabs:
               numbers.txt   <LASER><0000> laser sequence
               wif.txt       WIF / hex private key (optional, see checkbox)
 
-  VERIFY  QA station. Scan the laser-etched QR into the SEED box, scan the
-          sticker into the STICKER box. Big green MATCH or big red MISMATCH.
-          Handles keyboard-wedge scanners that eat the spaces between words.
+  VERIFY  QA station. Two ways to scan, both offline:
+            * webcam — click SCAN SEED / SCAN STICKER (needs opencv-python)
+            * USB keyboard-wedge scanner — click into the box and scan
+          Big green MATCH or big red MISMATCH. Handles wedge scanners that eat
+          the spaces between words.
 
 Run:      python csc_mint.py
 Build exe: see build_windows.bat
