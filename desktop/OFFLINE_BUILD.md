@@ -45,11 +45,48 @@ they download fine on a Mac because of the `--platform win_amd64` flag.
 build when no C compiler is present.
 
 
+## 1b. Verify the folder BEFORE you unplug the USB
+
+Instead of discovering one missing package per USB round-trip, run the doctor
+script. It reads the metadata inside every wheel already in the folder, walks
+the whole dependency graph, and prints **every** missing package at once --
+plus the exact `pip download` command to fetch them all in one go.
+
+```zsh
+python3 desktop/check_offline_packages.py ~/cscmint-offline-packages
+```
+
+Expected output when the folder is complete:
+
+```text
+Nothing missing. This folder is complete for an offline install.
+```
+
+If anything is missing it prints, for example:
+
+```text
+MISSING (2):
+  - pycryptodomex   (needed by: pytoniq-core-fork)
+  - bitarray        (needed by: pytoniq-core-fork)
+
+Run this on an internet-connected machine to grab them all at once:
+...
+```
+
+Copy that generated command, run it, then re-run the doctor until it says
+nothing is missing. The script is pure standard library, so it also runs on the
+offline Windows PC itself:
+
+```batch
+python E:\desktop\check_offline_packages.py E:\cscmint-offline-packages
+```
+
 ## 2. Put on the USB stick
 
 - `cscmint-offline-packages/` (the folder above)
 - `python-3.11.9-amd64.exe` (from python.org)
 - the `desktop/` folder **and** the `keygen-plugins/` folder from this repo
+- `VC_redist.x64.exe` (Microsoft Visual C++ 2015-2022 Redistributable, x64)
 
 ## 3. On the offline Windows PC
 
