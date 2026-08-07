@@ -21,7 +21,7 @@ if not exist "%~dp0keygen-plugins\txc24.py" (
 echo.
 echo [1/3] Installing build dependencies...
 python -m pip install --upgrade pip
-python -m pip install pyinstaller bip_utils coincurve cffi
+python -m pip install pyinstaller bip_utils coincurve cffi opencv-python numpy
 if errorlevel 1 goto :fail
 
 echo.
@@ -38,6 +38,7 @@ pyinstaller --noconfirm --clean --onefile --windowed ^
   --collect-all coincurve --collect-binaries coincurve ^
   --hidden-import coincurve --hidden-import coincurve._cffi_backend ^
   --hidden-import _cffi_backend --hidden-import cffi ^
+  --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
   csc_mint.py
 if errorlevel 1 goto :fail
 

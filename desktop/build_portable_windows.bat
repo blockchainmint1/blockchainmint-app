@@ -69,6 +69,7 @@ if not exist "%~dp0keygen-plugins\txc24.py" (
   --collect-all coincurve --collect-binaries coincurve ^
   --hidden-import coincurve --hidden-import coincurve._cffi_backend ^
   --hidden-import _cffi_backend --hidden-import cffi ^
+  --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
   --distpath "%DIST_DIR%" ^
   --workpath "%BUILD_DIR%\pyi-work" ^
   csc_mint.py
