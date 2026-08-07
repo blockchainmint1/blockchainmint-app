@@ -383,6 +383,7 @@ class VerifyTab(ttk.Frame):
         ttk.Spinbox(cam, from_=0, to=8, width=4, textvariable=self.cam_index_var,
                     font=MONO).pack(side="left", padx=(4, 10))
         ttk.Button(cam, text="Find cameras", command=self.find_cameras).pack(side="left")
+        ttk.Button(cam, text="Camera diagnostics", command=self.camera_diagnostics).pack(side="left", padx=(8, 0))
         self.cam_status = ttk.Label(cam, text="", font=MONO)
         self.cam_status.pack(side="left", padx=10)
 
