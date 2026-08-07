@@ -61,13 +61,53 @@ python -m pip install --no-index --find-links E:\cscmint-offline-packages ^
 
 cd desktop
 python -m PyInstaller --noconfirm --clean --onefile --windowed --name CSCMint ^
-  --add-data "..\keygen-plugins;keygen-plugins" --collect-all bip_utils csc_mint.py
+  --add-data "..\keygen-plugins;keygen-plugins" ^
+  --collect-all bip_utils --collect-all coincurve ^
+  --hidden-import Cryptodome --hidden-import Crypto ^
+  --hidden-import crcmod --hidden-import ecdsa --hidden-import nacl ^
+  --hidden-import bitarray --hidden-import cbor2 ^
+  csc_mint.py
 ```
 
+The extra `--hidden-import` flags are pre-emptive: PyInstaller's static
+analysis misses libraries that `bip_utils` imports lazily, and the failure only
+shows up when you double-click the `.exe` (`ModuleNotFoundError`), not at build
+time. Including them costs a couple of MB and saves a second USB round-trip.
+
 Output: `desktop\dist\CSCMint.exe` — a single self-contained file.
+
+## Troubleshooting the likely next snags
+
+**`error: Microsoft Visual C++ 14.0 or greater is required`** while installing
+`crcmod` — it's the only source-only package. Force the pure-Python fallback:
+
+```batch
+set CRCMOD_PURE_PYTHON=1
+python -m pip install --no-index --find-links E:\cscmint-offline-packages ^
+  --no-build-isolation crcmod
+```
+
+`--no-build-isolation` matters offline: without it pip tries to fetch a fresh
+`setuptools` from PyPI to build the sdist.
+
+**`ModuleNotFoundError` when running the `.exe`** — rebuild adding
+`--hidden-import <missing_module>` for whatever it names.
+
+**`ImportError: DLL load failed` for `coincurve` or `_cffi_backend`** — install
+the Microsoft Visual C++ 2015-2022 Redistributable (x64). Download
+`VC_redist.x64.exe` from Microsoft on an internet machine and carry it on the
+same USB; it's ~25 MB and worth having on hand.
+
+**`python` not recognized** — the "Add Python to PATH" checkbox was missed.
+Use `py -3.11 -m pip ...` and `py -3.11 -m PyInstaller ...` instead.
+
+**Windows SmartScreen blocks the `.exe`** — the binary is unsigned. Click
+"More info" then "Run anyway"; it only appears the first time.
 
 ## Notes
 
 - Replace `E:\` with your USB drive letter.
-- If `pip` isn't found, use `py -3.11 -m pip ...`.
 - The `.exe` never touches the network; keys are generated fully offline.
+- Nothing about the build embeds secrets — the same `.exe` is safe to rebuild
+  and re-copy at any time.
+
