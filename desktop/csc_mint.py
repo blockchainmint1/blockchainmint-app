@@ -487,6 +487,7 @@ class VerifyTab(ttk.Frame):
         if not qr_camera.available():
             messagebox.showwarning("Camera unavailable", qr_camera.unavailable_reason())
             return
+        self._cancel_auto_clear()
         if self.cam_session is not None:
             self.cam_session.stop()
             self.cam_session = None
