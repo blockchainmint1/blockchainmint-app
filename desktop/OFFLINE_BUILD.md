@@ -97,8 +97,11 @@ python -m pip install --no-index --find-links E:\cscmint-offline-packages ^
   pyinstaller bip_utils
 
 cd desktop
+mkdir keygen-plugins 2>nul
+copy /y ..\keygen-plugins\*.py keygen-plugins\
+
 python -m PyInstaller --noconfirm --clean --onefile --windowed --name CSCMint ^
-  --add-data "..\keygen-plugins;keygen-plugins" ^
+  --add-data "keygen-plugins;keygen-plugins" ^
   --collect-all bip_utils --collect-all coincurve ^
   --hidden-import Cryptodome --hidden-import Crypto ^
   --hidden-import crcmod --hidden-import ecdsa --hidden-import nacl ^
