@@ -5,7 +5,7 @@ The offline PC needs **Python 3.11 (64-bit)** — not 3.12/3.13/3.14.
 
 ## 1. On an internet-connected Mac/PC — collect the packages
 
-One command, everything included (tested — 34 files, **~9 MB** total).
+One command, everything included (tested — 35 files, **~11 MB** total).
 `pip`'s resolver chokes here because `crcmod` ships source-only, so we grab the
 wheels explicitly with `--no-deps` and pull `crcmod` separately.
 
@@ -19,7 +19,7 @@ python3 -m pip download \
   pyinstaller pyinstaller-hooks-contrib altgraph macholib packaging setuptools wheel \
   pefile pywin32-ctypes importlib_metadata zipp \
   "bip_utils==2.12.1" "cbor2<6.0.0" coincurve ecdsa ed25519-blake2b-fork \
-  pycryptodome pynacl py-sr25519-bindings pytoniq-core-fork \
+  pycryptodome pycryptodomex pynacl py-sr25519-bindings pytoniq-core-fork \
   typing_extensions cffi pycparser six bitarray x25519 \
   requests urllib3 idna charset-normalizer certifi asn1crypto base58
 
@@ -34,8 +34,8 @@ another "could not find a version that satisfies…" round-trip.
 Verify before unplugging the USB:
 
 ```zsh
-ls ~/cscmint-offline-packages | wc -l   # expect 34
-du -sh ~/cscmint-offline-packages       # expect ~9M
+ls ~/cscmint-offline-packages | wc -l   # expect 35
+du -sh ~/cscmint-offline-packages       # expect ~11M
 ```
 
 `pywin32-ctypes` and `pefile` are Windows-only PyInstaller dependencies, but
