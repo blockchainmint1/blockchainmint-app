@@ -138,13 +138,32 @@ def load_services(directory=None):
     return out, errors
 
 
+def detect_service_label(services, seed_text: str, sticker_address: str) -> str | None:
+    """Pick the right plugin from seed word count + sticker address format."""
+    words = len(seed_text.strip().split())
+    if words not in (12, 24):
+        return None
+    addr = sticker_address.strip().lower()
+    if addr.startswith("0x"):
+        chain = "ETH"
+    elif addr.startswith("t") or addr.startswith("txc:") or addr.startswith("bitcoincash:"):
+        chain = "TXC"
+    else:
+        return None
+    for label, _cls, _mod in services:
+        if chain in label and str(words) in label:
+            return label
+    return None
+
 
 # --------------------------------------------------------------------------
 # GUI
 # --------------------------------------------------------------------------
 
+
 BIG = ("Segoe UI", 12)
 HUGE = ("Segoe UI", 22, "bold")
+GIANT = ("Segoe UI", 32, "bold")
 MONO = ("Consolas", 11)
 
 
@@ -362,6 +381,8 @@ class VerifyTab(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.cam_session = None
+        self._auto_clear_after = None
+        self._last_verdict = None  # None, "match", "mismatch"
 
         top = ttk.Frame(self)
         top.pack(fill="x", padx=12, pady=(12, 4))
@@ -373,7 +394,7 @@ class VerifyTab(ttk.Frame):
         ).pack(side="left", padx=8)
         self.auto_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
-            top, text="Auto-verify when the sticker scan lands", variable=self.auto_var
+            top, text="Auto-advance on MATCH", variable=self.auto_var
         ).pack(side="left", padx=16)
 
         cam = ttk.Frame(self)
@@ -417,10 +438,11 @@ class VerifyTab(ttk.Frame):
         tk.Button(row, text="VERIFY", font=HUGE, bg="#0d47a1", fg="white",
                   activebackground="#1565c0", activeforeground="white",
                   height=1, command=self.verify).pack(side="left", expand=True, fill="x")
-        tk.Button(row, text="CLEAR / NEXT COIN", font=BIG, height=2,
+        tk.Button(row, text="CLEAR / NEXT COIN  (space)", font=BIG, height=2,
                   command=self.clear).pack(side="left", padx=(10, 0))
 
-        self.banner = tk.Label(self, text="waiting for a scan…", font=HUGE,
+        # Big verdict banner — high contrast so the operator sees it from across the table.
+        self.banner = tk.Label(self, text="waiting for a scan…", font=GIANT,
                                bg="#333", fg="white", height=2)
         self.banner.pack(fill="x", padx=12)
 
@@ -429,6 +451,11 @@ class VerifyTab(ttk.Frame):
 
         if not qr_camera.available():
             self.cam_status.config(text="no camera support in this build (USB scanner still works)")
+
+        # Spacebar clears the verdict and moves to the next coin (hands-free workflow).
+        for widget in (self, self.banner, self.seed_entry, self.sticker_entry, self.detail):
+            widget.bind("<Key-space>", self._on_space)
+        # Seed box also accepts Enter to jump to sticker; sticker box already verifies on Enter.
 
         self.after(200, lambda: self.seed_entry.focus_set())
 
@@ -460,6 +487,7 @@ class VerifyTab(ttk.Frame):
         if not qr_camera.available():
             messagebox.showwarning("Camera unavailable", qr_camera.unavailable_reason())
             return
+        self._cancel_auto_clear()
         if self.cam_session is not None:
             self.cam_session.stop()
             self.cam_session = None
@@ -490,8 +518,9 @@ class VerifyTab(ttk.Frame):
             self.cam_session = None
             self.sticker_var.set(text)
             self.set_cam_status("sticker captured from camera")
-            if self.auto_var.get():
-                self.verify()
+            # Auto-detect the coin type from seed words + sticker format.
+            self._detect_and_set_coin_type()
+            self.verify()
         self._start_camera("Scan STICKER QR — ESC to cancel", handle)
 
 
@@ -506,13 +535,25 @@ class VerifyTab(ttk.Frame):
         self.preview_only()
         return "break"
 
+    def _cancel_auto_clear(self):
+        if self._auto_clear_after is not None:
+            self.after_cancel(self._auto_clear_after)
+            self._auto_clear_after = None
+
+    def _on_space(self, event):
+        """Spacebar clears the verdict and readies the station for the next coin."""
+        self.clear()
+        return "break"
+
     def clear(self):
+        self._cancel_auto_clear()
         if self.cam_session is not None:
             self.cam_session.stop()
             self.cam_session = None
         self.seed_entry.delete("1.0", "end")
         self.sticker_var.set("")
         self.detail.delete("1.0", "end")
+        self._last_verdict = None
         self.set_banner("waiting for a scan…", "#333")
         self.seed_entry.focus_set()
 
@@ -522,6 +563,20 @@ class VerifyTab(ttk.Frame):
     def show(self, lines):
         self.detail.delete("1.0", "end")
         self.detail.insert("end", "\n".join(lines))
+
+    def _detect_and_set_coin_type(self):
+        """Pick the matching plugin from the seed word count and sticker address."""
+        seed = self.seed_text()
+        sticker = self.sticker_var.get().strip()
+        if not sticker:
+            return
+        label = detect_service_label(self.app.services, seed, sticker)
+        if label:
+            self.coin_var.set(label)
+            self.set_cam_status("auto-detected: " + label)
+        else:
+            words = len(seed.split()) if seed else 0
+            self.set_cam_status("could not auto-detect coin type ({} words)".format(words))
 
     # -- actions -----------------------------------------------------------
 
@@ -546,6 +601,7 @@ class VerifyTab(ttk.Frame):
             self.show(["{}".format(exc)])
 
     def verify(self):
+        self._cancel_auto_clear()
         seed = self.seed_text()
         sticker = self.sticker_var.get().strip()
         if not seed:
@@ -554,6 +610,9 @@ class VerifyTab(ttk.Frame):
         if not sticker:
             self.preview_only()
             return
+        # If the operator pasted/typed the sticker manually, make sure the
+        # coin type is still the right one before we verify.
+        self._detect_and_set_coin_type()
         try:
             service, _mod = self.app.service_for(self.coin_var.get())
             parts = [p.strip() for p in sticker.replace("\t", ",").split(",") if p.strip()]
@@ -571,11 +630,17 @@ class VerifyTab(ttk.Frame):
                 "asset id match    : {}".format("yes" if r["asset_id_ok"] else "NO"),
             ])
             if r["match"]:
-                self.set_banner("MATCH — apply the sticker", "#1b5e20")
+                self._last_verdict = "match"
+                self.set_banner("✓  MATCH — apply the sticker", "#1b5e20")
+                # Auto-advance after a short pause so the operator sees the green.
+                if self.auto_var.get():
+                    self._auto_clear_after = self.after(1500, self.clear)
             else:
-                self.set_banner("MISMATCH — DO NOT APPLY", "#b71c1c")
+                self._last_verdict = "mismatch"
+                self.set_banner("✗  MISMATCH — DO NOT APPLY", "#b71c1c")
         except Exception as exc:
-            self.set_banner("ERROR — DO NOT APPLY", "#b71c1c")
+            self._last_verdict = "mismatch"
+            self.set_banner("✗  ERROR — DO NOT APPLY", "#b71c1c")
             self.show([str(exc), "", traceback.format_exc()])
 
 
