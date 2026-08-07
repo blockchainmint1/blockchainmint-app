@@ -450,6 +450,12 @@ class VerifyTab(ttk.Frame):
         else:
             self.set_cam_status("no cameras detected")
 
+    def camera_diagnostics(self):
+        """Show a clear report of whether the camera stack is healthy."""
+        report = qr_camera.diagnostics()
+        self.set_cam_status(report.splitlines()[0])
+        messagebox.showinfo("Camera diagnostics", report)
+
     def _start_camera(self, title, on_text):
         if not qr_camera.available():
             messagebox.showwarning("Camera unavailable", qr_camera.unavailable_reason())
