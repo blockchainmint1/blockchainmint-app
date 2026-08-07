@@ -163,6 +163,7 @@ def detect_service_label(services, seed_text: str, sticker_address: str) -> str 
 
 BIG = ("Segoe UI", 12)
 HUGE = ("Segoe UI", 22, "bold")
+GIANT = ("Segoe UI", 32, "bold")
 MONO = ("Consolas", 11)
 
 
