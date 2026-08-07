@@ -22,9 +22,11 @@ Two tabs:
               numbers.txt   <LASER><0000> laser sequence
               wif.txt       WIF / hex private key (optional, see checkbox)
 
-  VERIFY  QA station. Scan the laser-etched QR into the SEED box, scan the
-          sticker into the STICKER box. Big green MATCH or big red MISMATCH.
-          Handles keyboard-wedge scanners that eat the spaces between words.
+  VERIFY  QA station. Two ways to scan, both offline:
+            * webcam — click SCAN SEED / SCAN STICKER (needs opencv-python)
+            * USB keyboard-wedge scanner — click into the box and scan
+          Big green MATCH or big red MISMATCH. Handles wedge scanners that eat
+          the spaces between words.
 
 Run:      python csc_mint.py
 Build exe: see build_windows.bat
@@ -40,6 +42,13 @@ import datetime
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+
+# Webcam QR scanning (optional — falls back to USB keyboard-wedge scanners).
+try:
+    from . import qr_camera  # type: ignore
+except Exception:  # running as a script or frozen by PyInstaller
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import qr_camera  # type: ignore
 
 APP_TITLE = "CSC Mint — Blockchain Mint keygen / QA station"
 
@@ -352,6 +361,7 @@ class VerifyTab(ttk.Frame):
     def __init__(self, parent, app: App):
         super().__init__(parent)
         self.app = app
+        self.cam_session = None
 
         top = ttk.Frame(self)
         top.pack(fill="x", padx=12, pady=(12, 4))
@@ -366,16 +376,36 @@ class VerifyTab(ttk.Frame):
             top, text="Auto-verify when the sticker scan lands", variable=self.auto_var
         ).pack(side="left", padx=16)
 
+        cam = ttk.Frame(self)
+        cam.pack(fill="x", padx=12, pady=(0, 2))
+        ttk.Label(cam, text="Camera #", font=MONO).pack(side="left")
+        self.cam_index_var = tk.StringVar(value="0")
+        ttk.Spinbox(cam, from_=0, to=8, width=4, textvariable=self.cam_index_var,
+                    font=MONO).pack(side="left", padx=(4, 10))
+        ttk.Button(cam, text="Find cameras", command=self.find_cameras).pack(side="left")
+        self.cam_status = ttk.Label(cam, text="", font=MONO)
+        self.cam_status.pack(side="left", padx=10)
+
         body = ttk.Frame(self)
         body.pack(fill="x", padx=12)
 
-        ttk.Label(body, text="1.  SEED  (scan the laser-etched QR)", font=BIG).pack(anchor="w", pady=(10, 2))
+        seed_hdr = ttk.Frame(body)
+        seed_hdr.pack(fill="x", pady=(10, 2))
+        ttk.Label(seed_hdr, text="1.  SEED  (scan the laser-etched QR)", font=BIG).pack(side="left")
+        tk.Button(seed_hdr, text="📷 SCAN SEED", font=BIG, bg="#0d47a1", fg="white",
+                  activebackground="#1565c0", activeforeground="white",
+                  command=self.scan_seed_camera).pack(side="right")
         self.seed_entry = tk.Text(body, height=3, font=MONO, wrap="word")
         self.seed_entry.pack(fill="x")
         self.seed_entry.bind("<Return>", self.seed_done)
 
-        ttk.Label(body, text="2.  STICKER  (scan the printed label: address, or address,assetID)",
-                  font=BIG).pack(anchor="w", pady=(12, 2))
+        stick_hdr = ttk.Frame(body)
+        stick_hdr.pack(fill="x", pady=(12, 2))
+        ttk.Label(stick_hdr, text="2.  STICKER  (scan the printed label: address, or address,assetID)",
+                  font=BIG).pack(side="left")
+        tk.Button(stick_hdr, text="📷 SCAN STICKER", font=BIG, bg="#0d47a1", fg="white",
+                  activebackground="#1565c0", activeforeground="white",
+                  command=self.scan_sticker_camera).pack(side="right")
         self.sticker_var = tk.StringVar()
         self.sticker_entry = tk.Entry(body, textvariable=self.sticker_var, font=MONO)
         self.sticker_entry.pack(fill="x")
@@ -396,7 +426,67 @@ class VerifyTab(ttk.Frame):
         self.detail = tk.Text(self, height=12, font=MONO, bg="#111", fg="#ddd", wrap="none")
         self.detail.pack(fill="both", expand=True, padx=12, pady=12)
 
+        if not qr_camera.available():
+            self.cam_status.config(text="no camera support in this build (USB scanner still works)")
+
         self.after(200, lambda: self.seed_entry.focus_set())
+
+    # -- webcam ------------------------------------------------------------
+
+    def set_cam_status(self, msg):
+        self.cam_status.config(text=msg)
+
+    def find_cameras(self):
+        if not qr_camera.available():
+            messagebox.showwarning("Camera unavailable", qr_camera.unavailable_reason())
+            return
+        self.set_cam_status("probing…")
+        self.update_idletasks()
+        found = qr_camera.list_cameras()
+        if found:
+            self.cam_index_var.set(str(found[0]))
+            self.set_cam_status("cameras found: {}".format(", ".join(str(i) for i in found)))
+        else:
+            self.set_cam_status("no cameras detected")
+
+    def _start_camera(self, title, on_text):
+        if not qr_camera.available():
+            messagebox.showwarning("Camera unavailable", qr_camera.unavailable_reason())
+            return
+        if self.cam_session is not None:
+            self.cam_session.stop()
+            self.cam_session = None
+        try:
+            index = int(self.cam_index_var.get())
+        except ValueError:
+            index = 0
+        session = qr_camera.QrCameraSession(
+            self, on_result=on_text, on_status=self.set_cam_status,
+            camera_index=index, window_title=title,
+        )
+        self.cam_session = session
+        if not session.start():
+            self.cam_session = None
+
+    def scan_seed_camera(self):
+        def handle(text):
+            self.cam_session = None
+            self.seed_entry.delete("1.0", "end")
+            self.seed_entry.insert("1.0", text)
+            self.set_cam_status("seed captured from camera")
+            self.preview_only()
+            self.sticker_entry.focus_set()
+        self._start_camera("Scan SEED QR — ESC to cancel", handle)
+
+    def scan_sticker_camera(self):
+        def handle(text):
+            self.cam_session = None
+            self.sticker_var.set(text)
+            self.set_cam_status("sticker captured from camera")
+            if self.auto_var.get():
+                self.verify()
+        self._start_camera("Scan STICKER QR — ESC to cancel", handle)
+
 
     # -- helpers -----------------------------------------------------------
 
@@ -410,6 +500,9 @@ class VerifyTab(ttk.Frame):
         return "break"
 
     def clear(self):
+        if self.cam_session is not None:
+            self.cam_session.stop()
+            self.cam_session = None
         self.seed_entry.delete("1.0", "end")
         self.sticker_var.set("")
         self.detail.delete("1.0", "end")

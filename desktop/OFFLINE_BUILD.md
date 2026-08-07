@@ -5,7 +5,10 @@ The offline PC needs **Python 3.11 (64-bit)** — not 3.12/3.13/3.14.
 
 ## 1. On an internet-connected Mac/PC — collect the packages
 
-One command, everything included (tested — 35 files, **~11 MB** total).
+One command, everything included (~37 files, **~55 MB** total — `opencv-python`
+is ~40 MB of that and is what powers the VERIFY tab's webcam QR scanning; drop
+`opencv-python numpy` from the list if you'll only ever use a USB
+keyboard-wedge scanner).
 `pip`'s resolver chokes here because `crcmod` ships source-only, so we grab the
 wheels explicitly with `--no-deps` and pull `crcmod` separately.
 
@@ -21,7 +24,8 @@ python3 -m pip download \
   "bip_utils==2.12.1" "cbor2<6.0.0" coincurve ecdsa ed25519-blake2b-fork \
   pycryptodome pycryptodomex pynacl py-sr25519-bindings pytoniq-core-fork \
   typing_extensions cffi pycparser six bitarray x25519 \
-  requests urllib3 idna charset-normalizer certifi asn1crypto base58
+  requests urllib3 idna charset-normalizer certifi asn1crypto base58 \
+  opencv-python numpy
 
 python3 -m pip download --no-deps --no-binary :all: \
   -d ~/cscmint-offline-packages crcmod
@@ -34,8 +38,8 @@ another "could not find a version that satisfies…" round-trip.
 Verify before unplugging the USB:
 
 ```zsh
-ls ~/cscmint-offline-packages | wc -l   # expect 35
-du -sh ~/cscmint-offline-packages       # expect ~11M
+ls ~/cscmint-offline-packages | wc -l   # expect 37
+du -sh ~/cscmint-offline-packages       # expect ~55M (11M without opencv)
 ```
 
 `pywin32-ctypes` and `pefile` are Windows-only PyInstaller dependencies, but
@@ -94,7 +98,7 @@ Install Python 3.11 with **"Add Python to PATH"** checked, then:
 
 ```batch
 python -m pip install --no-index --find-links E:\cscmint-offline-packages ^
-  pyinstaller bip_utils
+  pyinstaller bip_utils opencv-python numpy
 
 cd desktop
 mkdir keygen-plugins 2>nul
@@ -108,6 +112,7 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name CSCMint ^
   --hidden-import Cryptodome --hidden-import Crypto ^
   --hidden-import crcmod --hidden-import ecdsa --hidden-import nacl ^
   --hidden-import bitarray --hidden-import cbor2 ^
+  --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
   csc_mint.py
 ```
 
@@ -131,6 +136,15 @@ python -m pip install --no-index --find-links E:\cscmint-offline-packages ^
 
 `--no-build-isolation` matters offline: without it pip tries to fetch a fresh
 `setuptools` from PyPI to build the sdist.
+
+**VERIFY tab says "no camera support in this build"** — `opencv-python` wasn't
+installed when you built. Install it from the USB folder and rebuild with
+`--collect-all cv2`. The USB keyboard-wedge scanner path keeps working either
+way.
+
+**Camera opens black / "could not open camera #0"** — click **Find cameras** in
+the VERIFY tab to probe indexes 0-4 and pick the right one; laptops often put
+the USB document camera on #1.
 
 **`ModuleNotFoundError` when running the `.exe`** — rebuild adding
 `--hidden-import <missing_module>` for whatever it names.
