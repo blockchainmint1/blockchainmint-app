@@ -146,17 +146,28 @@ class App(tk.Tk):
         self.geometry("980x740")
         self.minsize(880, 640)
 
+        global _PLUGIN_DIR
         self.services, errors = load_services()
-        if not self.services:
-            messagebox.showerror(
+        while not self.services:
+            searched = "\n".join("  " + p for p in _candidate_dirs())
+            pick = messagebox.askretrycancel(
                 "No coin plugins found",
-                "Could not load any coin service plugins from:\n\n{}\n\n{}".format(
-                    plugin_dir(), "\n".join(errors) or "(directory empty)"
+                "Could not load any coin service plugins.\n\nSearched:\n{}\n\n{}\n\n"
+                "Click Retry to browse for the 'keygen-plugins' folder "
+                "(the one containing txc24.py), or Cancel to quit.".format(
+                    searched, "\n".join(errors) or "(directory empty)"
                 ),
             )
-            self.destroy()
-            raise SystemExit(1)
+            if not pick:
+                self.destroy()
+                raise SystemExit(1)
+            chosen = filedialog.askdirectory(title="Select the keygen-plugins folder")
+            if not chosen:
+                continue
+            _PLUGIN_DIR = os.path.normpath(chosen)
+            self.services, errors = load_services(_PLUGIN_DIR)
         self.plugin_errors = errors
+
 
         nb = ttk.Notebook(self)
         nb.pack(fill="both", expand=True, padx=8, pady=8)
