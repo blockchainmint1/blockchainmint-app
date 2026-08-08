@@ -21,6 +21,8 @@ caller falls back to the keyboard-wedge USB scanner flow.
 from __future__ import annotations
 
 import sys
+import time
+
 
 _cv2 = None
 _import_error = None
@@ -106,16 +108,25 @@ class QrCameraSession:
     """One live-preview scanning session bound to a Tk widget's event loop."""
 
     def __init__(self, widget, on_result, on_status=None, camera_index=0,
-                 window_title="Scan QR — ESC to cancel"):
+                 window_title="Scan QR — ESC to cancel",
+                 continuous=False, repeat_cooldown_ms=2500):
         self.widget = widget
         self.on_result = on_result
         self.on_status = on_status or (lambda _msg: None)
         self.camera_index = camera_index
         self.window_title = window_title
+        # continuous=True keeps the camera running after a decode so the
+        # station can take the seed scan and the sticker scan back-to-back
+        # without the operator touching anything.
+        self.continuous = continuous
+        self.repeat_cooldown_ms = repeat_cooldown_ms
         self.cap = None
         self.detector = None
         self._stopped = False
         self._after_id = None
+        self._last_text = None
+        self._last_text_at = 0.0
+
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -202,12 +213,23 @@ class QrCameraSession:
                 pass
 
             if text:
-                self.stop()
+                now = time.time() * 1000.0
+                if (self.continuous and text == self._last_text
+                        and now - self._last_text_at < self.repeat_cooldown_ms):
+                    # Same code still sitting in frame — ignore the echo.
+                    self._after_id = self.widget.after(15, self._tick)
+                    return
+                self._last_text = text
+                self._last_text_at = now
+                if not self.continuous:
+                    self.stop()
                 try:
                     self.on_result(text)
                 except Exception as exc:
                     self.on_status("scan handler failed: {}".format(exc))
-                return
+                if not self.continuous or self._stopped:
+                    return
+
         except Exception as exc:
             self.on_status("camera error: {}".format(exc))
             self.stop()

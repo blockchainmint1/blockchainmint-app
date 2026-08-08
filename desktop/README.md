@@ -28,10 +28,13 @@ Batches go into a timestamped subfolder so you can never overwrite one.
 
 **VERIFY tab** — the QA station.
 
-1. Scan the laser-etched QR into the SEED box. It immediately shows the address
-   and Asset ID the sticker *should* say.
-2. Scan the sticker into the STICKER box.
-3. Giant green **MATCH — apply the sticker** or red **MISMATCH — DO NOT APPLY**.
+1. Pick the coin type (default `TXC — 12 word seed`) and press **START**.
+2. The camera runs continuously. Scan the laser-etched seed QR — the station
+   shows the address and Asset ID the sticker *should* say, then waits for it.
+3. Scan the sticker. Giant green **✓** (press **space** for the next coin) or
+   giant red **✗**, which needs a mouse click to clear and then goes back to
+   waiting for the *same* sticker — so a skipped sticker scan never makes you
+   re-scan the coin.
 
 Run-on seeds from keyboard-wedge scanners (the space-eating bug) are repaired
 automatically by the plugins' `_normalize_mnemonic`, so a scan like
