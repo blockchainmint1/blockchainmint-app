@@ -5,10 +5,11 @@ The offline PC needs **Python 3.11 (64-bit)** — not 3.12/3.13/3.14.
 
 ## 1. On an internet-connected Mac/PC — collect the packages
 
-One command, everything included (~37 files, **~55 MB** total — `opencv-python`
-is ~40 MB of that and is what powers the VERIFY tab's webcam QR scanning; drop
+One command, everything included (~30 files, **~40 MB** total — `opencv-python`
+is ~35 MB of that and is what powers the VERIFY tab's webcam QR scanning; drop
 `opencv-python numpy` from the list if you'll only ever use a USB
 keyboard-wedge scanner).
+
 `pip`'s resolver chokes here because `crcmod` ships source-only, so we grab the
 wheels explicitly with `--no-deps` and pull `crcmod` separately.
 
@@ -21,11 +22,11 @@ python3 -m pip download \
   -d ~/cscmint-offline-packages \
   pyinstaller pyinstaller-hooks-contrib altgraph macholib packaging setuptools wheel \
   pefile pywin32-ctypes importlib_metadata zipp \
-  "bip_utils==2.12.1" "cbor2<6.0.0" coincurve ecdsa ed25519-blake2b-fork \
-  pycryptodome pycryptodomex pynacl py-sr25519-bindings pytoniq-core-fork \
-  typing_extensions cffi pycparser six bitarray x25519 \
+  "bip_utils==2.12.1" "cbor2<6.0.0" coincurve ecdsa \
+  pycryptodome cffi pycparser six bitarray \
   requests urllib3 idna charset-normalizer certifi asn1crypto base58 \
   opencv-python numpy
+
 
 python3 -m pip download --no-deps --no-binary :all: \
   -d ~/cscmint-offline-packages crcmod
@@ -38,9 +39,11 @@ another "could not find a version that satisfies…" round-trip.
 Verify before unplugging the USB:
 
 ```zsh
-ls ~/cscmint-offline-packages | wc -l   # expect 37
-du -sh ~/cscmint-offline-packages       # expect ~55M (11M without opencv)
+ls ~/cscmint-offline-packages | wc -l   # expect ~30
+
+du -sh ~/cscmint-offline-packages       # expect ~40M (~10M without opencv)
 ```
+
 
 `pywin32-ctypes` and `pefile` are Windows-only PyInstaller dependencies, but
 they download fine on a Mac because of the `--platform win_amd64` flag.
@@ -70,8 +73,8 @@ If anything is missing it prints, for example:
 
 ```text
 MISSING (2):
-  - pycryptodomex   (needed by: pytoniq-core-fork)
-  - bitarray        (needed by: pytoniq-core-fork)
+  - cffi            (needed by: coincurve)
+  - bitarray        (needed by: bip_utils)
 
 Run this on an internet-connected machine to grab them all at once:
 ...
@@ -110,10 +113,11 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name CSCMint ^
   --hidden-import coincurve --hidden-import coincurve._cffi_backend ^
   --hidden-import _cffi_backend --hidden-import cffi ^
   --hidden-import Cryptodome --hidden-import Crypto ^
-  --hidden-import crcmod --hidden-import ecdsa --hidden-import nacl ^
-  --hidden-import bitarray --hidden-import cbor2 ^
+  --hidden-import crcmod --hidden-import ecdsa --hidden-import bitarray ^
+  --hidden-import cbor2 ^
   --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
   csc_mint.py
+
 ```
 
 The extra `--hidden-import` flags are pre-emptive: PyInstaller's static

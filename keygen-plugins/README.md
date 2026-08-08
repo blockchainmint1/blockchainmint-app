@@ -1,8 +1,8 @@
-# Seed-phrase keygen plugins (btc12 / ltc12 / dash12 / xmr12 / eth12 / txc12)
+# Seed-phrase keygen plugins (btc12 / ltc12 / dash12 / eth12 / txc12)
 
 These are the Cold Storage Coin series whose only engraved secret is a BIP-39
 seed phrase. Identical behaviour apart from the chain and the word count. The
-BTC / LTC / DASH / XMR series are 12-word only.
+BTC / LTC / DASH series are 12-word only.
 
 | File | Class | Chain | Words | Entropy |
 | --- | --- | --- | --- | --- |
@@ -11,11 +11,10 @@ BTC / LTC / DASH / XMR series are 12-word only.
 | `btc12.py` | `Btc12CoinService` | Bitcoin (m/44'/0') | 12 | 128-bit |
 | `ltc12.py` | `Ltc12CoinService` | Litecoin (m/44'/2') | 12 | 128-bit |
 | `dash12.py` | `Dash12CoinService` | Dash (m/44'/5') | 12 | 128-bit |
-| `xmr12.py` | `Xmr12CoinService` | Monero (m/44'/128', ed25519 SLIP-10) | 12 | 128-bit |
 
 BTC / LTC / DASH mint legacy P2PKH addresses (`1…` / `L…` / `X…`) and write the
-WIF to `wif.txt`. XMR mints the primary address (`4…`) and additionally writes
-`viewkeys.txt` alongside the spend key.
+WIF to `wif.txt`.
+
 
 ## How the existing keygen works
 
