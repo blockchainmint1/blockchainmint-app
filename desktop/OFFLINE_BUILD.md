@@ -117,9 +117,18 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name CSCMint ^
   --hidden-import cbor2 ^
   --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
   --collect-all pyzbar --hidden-import pyzbar --hidden-import pyzbar.pyzbar ^
+  --add-binary "%LOCALAPPDATA%\Programs\Python\Python311\Lib\site-packages\pyzbar\libzbar-64.dll;pyzbar" ^
+  --add-binary "%LOCALAPPDATA%\Programs\Python\Python311\Lib\site-packages\pyzbar\libiconv.dll;pyzbar" ^
   csc_mint.py
 
 ```
+
+`--add-binary` for the two pyzbar DLLs is required: `--collect-all pyzbar`
+copies the Python files but not `libzbar-64.dll`, and the exe then reports
+*"Failed to load dynlib/dll ... libzbar-64.dll"* in Camera diagnostics. Adjust
+the path if your Python lives elsewhere (`python -c "import os,pyzbar;
+print(os.path.dirname(pyzbar.__file__))"` prints it).
+
 
 The extra `--hidden-import` flags are pre-emptive: PyInstaller's static
 analysis misses libraries that `bip_utils` imports lazily, and the failure only
