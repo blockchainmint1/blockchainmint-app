@@ -5,7 +5,8 @@ CSC Mint — Blockchain Mint Cold Storage Coin keygen + QA station.
 Ugly. Bulletproof. Offline. Zero network code anywhere in this file.
 
 Replaces csc-manager-ui on the air-gapped laser PC. It drives the same coin
-service plugins that live in ../keygen-plugins (txc12, txc24, eth12, eth24),
+service plugins that live in ../keygen-plugins (txc12/24, eth12/24, btc12,
+ltc12, dash12, xmr12),
 so there is exactly ONE implementation of the crypto and it is the one already
 reviewed and tested.
 
@@ -65,7 +66,12 @@ PLUGIN_FILES = [
     ("TXC — 12 word seed", "txc12.py", "Txc12CoinService"),
     ("ETH / EVM — 24 word seed", "eth24.py", "Eth24CoinService"),
     ("ETH / EVM — 12 word seed", "eth12.py", "Eth12CoinService"),
+    ("BTC — 12 word seed", "btc12.py", "Btc12CoinService"),
+    ("LTC — 12 word seed", "ltc12.py", "Ltc12CoinService"),
+    ("DASH — 12 word seed", "dash12.py", "Dash12CoinService"),
+    ("XMR — 12 word seed", "xmr12.py", "Xmr12CoinService"),
 ]
+
 
 
 def _candidate_dirs():
@@ -144,17 +150,27 @@ def detect_service_label(services, seed_text: str, sticker_address: str) -> str 
     words = len(seed_text.strip().split())
     if words not in (12, 24):
         return None
-    addr = sticker_address.strip().lower()
+    raw = sticker_address.strip()
+    addr = raw.lower()
     if addr.startswith("0x"):
         chain = "ETH"
-    elif addr.startswith("t") or addr.startswith("txc:") or addr.startswith("bitcoincash:"):
+    elif addr.startswith("txc:") or raw.startswith("T"):
         chain = "TXC"
+    elif raw.startswith("X") and len(raw) in range(30, 40):
+        chain = "DASH"
+    elif raw.startswith("L") or raw.startswith("M") or addr.startswith("ltc1"):
+        chain = "LTC"
+    elif raw.startswith("1") or raw.startswith("3") or addr.startswith("bc1"):
+        chain = "BTC"
+    elif (raw.startswith("4") or raw.startswith("8")) and len(raw) >= 90:
+        chain = "XMR"
     else:
         return None
     for label, _cls, _mod in services:
         if chain in label and str(words) in label:
             return label
     return None
+
 
 
 # --------------------------------------------------------------------------
