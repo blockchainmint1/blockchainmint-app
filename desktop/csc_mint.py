@@ -392,91 +392,111 @@ class MintTab(ttk.Frame):
 
 
 class VerifyTab(ttk.Frame):
-    """QA station: scan coin, scan sticker, get a giant verdict."""
+    """QA station.
+
+    Flow (hands-free after the first click):
+
+        idle     → big START button
+        seed     → camera live, waiting for the seed QR
+        sticker  → seed accepted, camera still live, waiting for the sticker QR
+        match    → giant green ✓ ; SPACEBAR starts the next coin
+        error    → giant red ✗ ; needs a mouse click, then goes BACK to the
+                   state it failed in (a bad sticker keeps the same seed, so a
+                   missed sticker scan doesn't force a re-scan of the coin)
+    """
+
+    IDLE, SEED, STICKER, MATCH, ERROR = "idle", "seed", "sticker", "match", "error"
 
     def __init__(self, parent, app: App):
         super().__init__(parent)
         self.app = app
         self.cam_session = None
-        self._auto_clear_after = None
-        self._last_verdict = None  # None, "match", "mismatch"
+        self.state = self.IDLE
+        self.resume_state = self.SEED
+        self.seed = ""
+        self.expected_address = ""
+        self.expected_asset_id = ""
 
+        # -- header: coin type + camera ------------------------------------
         top = ttk.Frame(self)
         top.pack(fill="x", padx=12, pady=(12, 4))
         ttk.Label(top, text="Coin type", font=BIG).pack(side="left")
-        self.coin_var = tk.StringVar(value=app.service_labels()[0])
+        labels = app.service_labels()
+        default = next((l for l in labels if "TXC" in l and "12" in l), labels[0])
+        self.coin_var = tk.StringVar(value=default)
         ttk.Combobox(
-            top, textvariable=self.coin_var, values=app.service_labels(),
-            state="readonly", width=30, font=BIG,
+            top, textvariable=self.coin_var, values=labels,
+            state="readonly", width=28, font=BIG,
         ).pack(side="left", padx=8)
-        self.auto_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            top, text="Auto-advance on MATCH", variable=self.auto_var
-        ).pack(side="left", padx=16)
 
-        cam = ttk.Frame(self)
-        cam.pack(fill="x", padx=12, pady=(0, 2))
-        ttk.Label(cam, text="Camera #", font=MONO).pack(side="left")
+        ttk.Label(top, text="Camera #", font=MONO).pack(side="left", padx=(16, 2))
         self.cam_index_var = tk.StringVar(value="0")
-        ttk.Spinbox(cam, from_=0, to=8, width=4, textvariable=self.cam_index_var,
-                    font=MONO).pack(side="left", padx=(4, 10))
-        ttk.Button(cam, text="Find cameras", command=self.find_cameras).pack(side="left")
-        ttk.Button(cam, text="Camera diagnostics", command=self.camera_diagnostics).pack(side="left", padx=(8, 0))
-        self.cam_status = ttk.Label(cam, text="", font=MONO)
-        self.cam_status.pack(side="left", padx=10)
+        ttk.Spinbox(top, from_=0, to=8, width=4, textvariable=self.cam_index_var,
+                    font=MONO).pack(side="left", padx=(2, 8))
+        ttk.Button(top, text="Find cameras", command=self.find_cameras).pack(side="left")
+        ttk.Button(top, text="Diagnostics", command=self.camera_diagnostics).pack(side="left", padx=(6, 0))
 
-        body = ttk.Frame(self)
-        body.pack(fill="x", padx=12)
+        self.cam_status = ttk.Label(self, text="", font=MONO)
+        self.cam_status.pack(fill="x", padx=12)
 
-        seed_hdr = ttk.Frame(body)
-        seed_hdr.pack(fill="x", pady=(10, 2))
-        ttk.Label(seed_hdr, text="1.  SEED  (scan the laser-etched QR)", font=BIG).pack(side="left")
-        tk.Button(seed_hdr, text="📷 SCAN SEED", font=BIG, bg="#0d47a1", fg="white",
-                  activebackground="#1565c0", activeforeground="white",
-                  command=self.scan_seed_camera).pack(side="right")
-        self.seed_entry = tk.Text(body, height=3, font=MONO, wrap="word")
-        self.seed_entry.pack(fill="x")
-        self.seed_entry.bind("<Return>", self.seed_done)
+        # -- the big stage --------------------------------------------------
+        self.stage = tk.Frame(self, bg="#222", height=220)
+        self.stage.pack(fill="x", padx=12, pady=(6, 0))
+        self.stage.pack_propagate(False)
 
-        stick_hdr = ttk.Frame(body)
-        stick_hdr.pack(fill="x", pady=(12, 2))
-        ttk.Label(stick_hdr, text="2.  STICKER  (scan the printed label: address, or address,assetID)",
-                  font=BIG).pack(side="left")
-        tk.Button(stick_hdr, text="📷 SCAN STICKER", font=BIG, bg="#0d47a1", fg="white",
-                  activebackground="#1565c0", activeforeground="white",
-                  command=self.scan_sticker_camera).pack(side="right")
-        self.sticker_var = tk.StringVar()
-        self.sticker_entry = tk.Entry(body, textvariable=self.sticker_var, font=MONO)
-        self.sticker_entry.pack(fill="x")
-        self.sticker_entry.bind("<Return>", lambda _e: self.verify())
+        self.start_btn = tk.Button(
+            self.stage, text="▶  START", font=("Segoe UI", 40, "bold"),
+            bg="#0d47a1", fg="white", activebackground="#1565c0",
+            activeforeground="white", command=self.start_station,
+        )
+        self.start_btn.pack(expand=True, fill="both", padx=40, pady=30)
 
-        row = ttk.Frame(self)
-        row.pack(fill="x", padx=12, pady=10)
-        tk.Button(row, text="VERIFY", font=HUGE, bg="#0d47a1", fg="white",
-                  activebackground="#1565c0", activeforeground="white",
-                  height=1, command=self.verify).pack(side="left", expand=True, fill="x")
-        tk.Button(row, text="CLEAR / NEXT COIN  (space)", font=BIG, height=2,
-                  command=self.clear).pack(side="left", padx=(10, 0))
-
-        # Big verdict banner — high contrast so the operator sees it from across the table.
-        self.banner = tk.Label(self, text="waiting for a scan…", font=GIANT,
+        self.verdict = tk.Label(self.stage, text="", font=("Segoe UI", 96, "bold"),
+                                bg="#222", fg="white")
+        self.banner = tk.Label(self, text="press START to begin", font=GIANT,
                                bg="#333", fg="white", height=2)
         self.banner.pack(fill="x", padx=12)
 
-        self.detail = tk.Text(self, height=12, font=MONO, bg="#111", fg="#ddd", wrap="none")
-        self.detail.pack(fill="both", expand=True, padx=12, pady=12)
+        # Error acknowledgement — only visible while a red ✗ is on screen.
+        self.ack_btn = tk.Button(self, text="CLEAR ERROR  (click to continue)",
+                                 font=HUGE, bg="#b71c1c", fg="white",
+                                 activebackground="#c62828", activeforeground="white",
+                                 command=self.ack_error)
+
+        # -- captured values ------------------------------------------------
+        info = ttk.Frame(self)
+        info.pack(fill="x", padx=12, pady=(8, 0))
+        self.seed_label = tk.Label(info, text="seed     : —", font=MONO, anchor="w",
+                                   justify="left", wraplength=920)
+        self.seed_label.pack(fill="x")
+        self.addr_label = tk.Label(info, text="expected : —", font=MONO, anchor="w",
+                                   justify="left", wraplength=920)
+        self.addr_label.pack(fill="x")
+
+        # -- manual / USB wedge fallback -------------------------------------
+        man = ttk.Frame(self)
+        man.pack(fill="x", padx=12, pady=(8, 0))
+        ttk.Label(man, text="Manual / USB scanner:", font=MONO).pack(side="left")
+        self.manual_var = tk.StringVar()
+        ent = tk.Entry(man, textvariable=self.manual_var, font=MONO)
+        ent.pack(side="left", fill="x", expand=True, padx=6)
+        ent.bind("<Return>", self._manual_submit)
+        self.manual_entry = ent
+        ttk.Button(man, text="Enter", command=lambda: self._manual_submit(None)).pack(side="left")
+        ttk.Button(man, text="Stop / Reset", command=self.reset_station).pack(side="left", padx=(6, 0))
+
+        self.detail = tk.Text(self, height=8, font=MONO, bg="#111", fg="#ddd", wrap="none")
+        self.detail.pack(fill="both", expand=True, padx=12, pady=10)
 
         if not qr_camera.available():
-            self.cam_status.config(text="no camera support in this build (USB scanner still works)")
+            self.set_cam_status("no camera support in this build (USB scanner still works)")
 
-        # Spacebar clears the verdict and moves to the next coin (hands-free workflow).
-        for widget in (self, self.banner, self.seed_entry, self.sticker_entry, self.detail):
+        # Spacebar only advances from a green MATCH.
+        for widget in (self, self.banner, self.stage, self.verdict, self.detail):
             widget.bind("<Key-space>", self._on_space)
-        # Seed box also accepts Enter to jump to sticker; sticker box already verifies on Enter.
+        self.bind_all("<Key-space>", self._on_space_global, add="+")
 
-        self.after(200, lambda: self.seed_entry.focus_set())
-
-    # -- webcam ------------------------------------------------------------
+    # -- camera plumbing ---------------------------------------------------
 
     def set_cam_status(self, msg):
         self.cam_status.config(text=msg)
@@ -495,84 +515,54 @@ class VerifyTab(ttk.Frame):
             self.set_cam_status("no cameras detected")
 
     def camera_diagnostics(self):
-        """Show a clear report of whether the camera stack is healthy."""
         report = qr_camera.diagnostics()
         self.set_cam_status(report.splitlines()[0])
         messagebox.showinfo("Camera diagnostics", report)
 
-    def _start_camera(self, title, on_text):
+    def _camera_on(self, title):
+        """Run one continuous session that feeds every decode into on_scan."""
+        self._camera_off()
         if not qr_camera.available():
-            messagebox.showwarning("Camera unavailable", qr_camera.unavailable_reason())
+            self.set_cam_status("camera off — use the manual box or a USB scanner")
             return
-        self._cancel_auto_clear()
-        if self.cam_session is not None:
-            self.cam_session.stop()
-            self.cam_session = None
         try:
             index = int(self.cam_index_var.get())
         except ValueError:
             index = 0
         session = qr_camera.QrCameraSession(
-            self, on_result=on_text, on_status=self.set_cam_status,
-            camera_index=index, window_title=title,
+            self, on_result=self.on_scan, on_status=self.set_cam_status,
+            camera_index=index, window_title=title, continuous=True,
         )
         self.cam_session = session
         if not session.start():
             self.cam_session = None
 
-    def scan_seed_camera(self):
-        def handle(text):
-            self.cam_session = None
-            self.seed_entry.delete("1.0", "end")
-            self.seed_entry.insert("1.0", text)
-            self.set_cam_status("seed captured from camera")
-            self.preview_only()
-            self.sticker_entry.focus_set()
-        self._start_camera("Scan SEED QR — ESC to cancel", handle)
-
-    def scan_sticker_camera(self):
-        def handle(text):
-            self.cam_session = None
-            self.sticker_var.set(text)
-            self.set_cam_status("sticker captured from camera")
-            # Auto-detect the coin type from seed words + sticker format.
-            self._detect_and_set_coin_type()
-            self.verify()
-        self._start_camera("Scan STICKER QR — ESC to cancel", handle)
-
-
-    # -- helpers -----------------------------------------------------------
-
-    def seed_text(self):
-        return self.seed_entry.get("1.0", "end").strip()
-
-    def seed_done(self, _event):
-        """Enter in the seed box (scanners send it) jumps to the sticker box."""
-        self.sticker_entry.focus_set()
-        self.preview_only()
-        return "break"
-
-    def _cancel_auto_clear(self):
-        if self._auto_clear_after is not None:
-            self.after_cancel(self._auto_clear_after)
-            self._auto_clear_after = None
-
-    def _on_space(self, event):
-        """Spacebar clears the verdict and readies the station for the next coin."""
-        self.clear()
-        return "break"
-
-    def clear(self):
-        self._cancel_auto_clear()
+    def _camera_off(self):
         if self.cam_session is not None:
             self.cam_session.stop()
             self.cam_session = None
-        self.seed_entry.delete("1.0", "end")
-        self.sticker_var.set("")
-        self.detail.delete("1.0", "end")
-        self._last_verdict = None
-        self.set_banner("waiting for a scan…", "#333")
-        self.seed_entry.focus_set()
+
+    # -- stage rendering ----------------------------------------------------
+
+    def _show_start(self):
+        self.verdict.pack_forget()
+        self.ack_btn.pack_forget()
+        self.start_btn.pack(expand=True, fill="both", padx=40, pady=30)
+        self.stage.config(bg="#222")
+
+    def _show_live(self):
+        self.start_btn.pack_forget()
+        self.ack_btn.pack_forget()
+        self.verdict.config(text="◉  CAMERA LIVE", font=("Segoe UI", 44, "bold"),
+                            bg="#102a43", fg="#8fd3ff")
+        self.stage.config(bg="#102a43")
+        self.verdict.pack(expand=True, fill="both")
+
+    def _show_verdict(self, symbol, color, fg="white"):
+        self.start_btn.pack_forget()
+        self.verdict.config(text=symbol, font=("Segoe UI", 110, "bold"), bg=color, fg=fg)
+        self.stage.config(bg=color)
+        self.verdict.pack(expand=True, fill="both")
 
     def set_banner(self, text, color):
         self.banner.config(text=text, bg=color)
@@ -581,84 +571,194 @@ class VerifyTab(ttk.Frame):
         self.detail.delete("1.0", "end")
         self.detail.insert("end", "\n".join(lines))
 
-    def _detect_and_set_coin_type(self):
-        """Pick the matching plugin from the seed word count and sticker address."""
-        seed = self.seed_text()
-        sticker = self.sticker_var.get().strip()
-        if not sticker:
-            return
-        label = detect_service_label(self.app.services, seed, sticker)
-        if label:
-            self.coin_var.set(label)
-            self.set_cam_status("auto-detected: " + label)
+    # -- state machine ------------------------------------------------------
+
+    def start_station(self):
+        self.seed = ""
+        self.expected_address = ""
+        self.expected_asset_id = ""
+        self.seed_label.config(text="seed     : —")
+        self.addr_label.config(text="expected : —")
+        self._enter_seed()
+
+    def _enter_seed(self):
+        self.state = self.SEED
+        self.resume_state = self.SEED
+        self._show_live()
+        self.set_banner("WAITING FOR SEED QR", "#0d47a1")
+        self._camera_on("Scan SEED QR — ESC to stop")
+        self.manual_entry.focus_set()
+
+    def _enter_sticker(self):
+        self.state = self.STICKER
+        self.resume_state = self.STICKER
+        self._show_live()
+        self.set_banner("WAITING FOR PUBLIC KEY STICKER", "#4a3800")
+        self._camera_on("Scan STICKER QR — ESC to stop")
+        self.manual_entry.focus_set()
+
+    def _enter_match(self):
+        self.state = self.MATCH
+        self._camera_off()
+        self.ack_btn.pack_forget()
+        self._show_verdict("✓", "#1b5e20")
+        self.set_banner("MATCH — apply the sticker, then press SPACE", "#1b5e20")
+        self.focus_set()
+
+    def _enter_error(self, headline, lines, resume_state):
+        self.state = self.ERROR
+        self.resume_state = resume_state
+        self._camera_off()
+        self._show_verdict("✗", "#b71c1c")
+        self.set_banner(headline, "#b71c1c")
+        self.ack_btn.pack(fill="x", padx=12, pady=(6, 0))
+        self.show(lines)
+
+    def ack_error(self):
+        """Manual acknowledgement — resume exactly where we failed."""
+        self.ack_btn.pack_forget()
+        if self.resume_state == self.STICKER and self.seed:
+            self._enter_sticker()
         else:
-            words = len(seed.split()) if seed else 0
-            self.set_cam_status("could not auto-detect coin type ({} words)".format(words))
+            self.start_station()
 
-    # -- actions -----------------------------------------------------------
+    def reset_station(self):
+        self._camera_off()
+        self.state = self.IDLE
+        self.seed = ""
+        self.expected_address = ""
+        self.expected_asset_id = ""
+        self.seed_label.config(text="seed     : —")
+        self.addr_label.config(text="expected : —")
+        self.manual_var.set("")
+        self.show([])
+        self._show_start()
+        self.set_banner("press START to begin", "#333")
 
-    def preview_only(self):
-        """Seed scanned, no sticker yet — show what the sticker SHOULD say."""
-        seed = self.seed_text()
-        if not seed:
+    def _on_space(self, _event):
+        if self.state == self.MATCH:
+            self.start_station()
+        return "break"
+
+    def _on_space_global(self, event):
+        """Space advances from MATCH even when focus wandered — but never
+        while the operator is typing in an entry/text widget."""
+        if self.state != self.MATCH:
+            return None
+        if isinstance(event.widget, (tk.Entry, tk.Text, ttk.Entry, ttk.Combobox)):
+            return None
+        self.start_station()
+        return "break"
+
+    # -- scan handling ------------------------------------------------------
+
+    def _manual_submit(self, _event=None):
+        text = self.manual_var.get().strip()
+        if not text:
+            return "break"
+        self.manual_var.set("")
+        if self.state in (self.IDLE, self.MATCH):
+            self.start_station()
+        self.on_scan(text)
+        return "break"
+
+    @staticmethod
+    def _looks_like_seed(text: str) -> bool:
+        return len(text.strip().split()) >= 12
+
+    def on_scan(self, text: str):
+        text = (text or "").strip()
+        if not text:
+            return
+        if self.state == self.SEED:
+            self._handle_seed(text)
+        elif self.state == self.STICKER:
+            self._handle_sticker(text)
+        # verdict states ignore scans until they're cleared
+
+    def _handle_seed(self, text):
+        if not self._looks_like_seed(text):
+            self._enter_error(
+                "THAT'S NOT A SEED — scan the laser-etched QR",
+                ["scanned: {}".format(text)],
+                self.SEED,
+            )
             return
         try:
             service, _mod = self.app.service_for(self.coin_var.get())
-            coin = service.get_coin_from_mnemonic(seed)
+            coin = service.get_coin_from_mnemonic(text)
             asset_id = service.generate_asset_id(coin)
-            self.set_banner("SEED OK — now scan the sticker", "#0d47a1")
-            self.show([
-                "words          : {}".format(coin.seed),
-                "expect address : {}".format(coin.address),
-                "expect assetID : {}".format(asset_id),
-                "derivation     : {}".format(service.derivation_path()),
-            ])
         except Exception as exc:
-            self.set_banner("BAD SEED — do not ship this coin", "#b71c1c")
-            self.show(["{}".format(exc)])
+            self._enter_error(
+                "BAD SEED — do not ship this coin",
+                [str(exc), "", "scanned: {}".format(text)],
+                self.SEED,
+            )
+            return
+        self.seed = coin.seed
+        self.expected_address = coin.address
+        self.expected_asset_id = asset_id
+        self.seed_label.config(text="seed     : {}".format(coin.seed))
+        self.addr_label.config(text="expected : {}   ({})".format(coin.address, asset_id))
+        self.show([
+            "coin type      : {}".format(self.coin_var.get()),
+            "derivation     : {}".format(service.derivation_path()),
+            "expect address : {}".format(coin.address),
+            "expect assetID : {}".format(asset_id),
+            "",
+            "Now scan the sticker.",
+        ])
+        self._enter_sticker()
 
-    def verify(self):
-        self._cancel_auto_clear()
-        seed = self.seed_text()
-        sticker = self.sticker_var.get().strip()
-        if not seed:
-            self.set_banner("scan the coin first", "#333")
+    def _handle_sticker(self, text):
+        # Operator scanned the NEXT coin's seed without scanning this sticker.
+        if self._looks_like_seed(text):
+            self._enter_error(
+                "STICKER MISSED — that was a seed",
+                [
+                    "You scanned a seed phrase while the station was waiting",
+                    "for a sticker.",
+                    "",
+                    "Still waiting for : {}".format(self.expected_address),
+                    "assetID           : {}".format(self.expected_asset_id),
+                    "",
+                    "Clear this error and scan the sticker for THIS coin.",
+                ],
+                self.STICKER,
+            )
             return
-        if not sticker:
-            self.preview_only()
-            return
-        # If the operator pasted/typed the sticker manually, make sure the
-        # coin type is still the right one before we verify.
-        self._detect_and_set_coin_type()
+
+        parts = [p.strip() for p in text.replace("\t", ",").split(",") if p.strip()]
+        address = parts[0]
+        asset_id = parts[1] if len(parts) > 1 else None
         try:
             service, _mod = self.app.service_for(self.coin_var.get())
-            parts = [p.strip() for p in sticker.replace("\t", ",").split(",") if p.strip()]
-            address = parts[0]
-            asset_id = parts[1] if len(parts) > 1 else None
-            r = service.verify_pair(seed, address, asset_id)
-            self.show([
-                "expected address  : {}".format(r["expected_address"]),
-                "scanned  address  : {}".format(r["scanned_address"]),
-                "expected asset id : {}".format(r["expected_asset_id"]),
-                "scanned  asset id : {}".format(r["scanned_asset_id"]),
-                "derivation        : {}".format(r["derivation"]),
-                "",
-                "address match     : {}".format("yes" if r["address_ok"] else "NO"),
-                "asset id match    : {}".format("yes" if r["asset_id_ok"] else "NO"),
-            ])
-            if r["match"]:
-                self._last_verdict = "match"
-                self.set_banner("✓  MATCH — apply the sticker", "#1b5e20")
-                # Auto-advance after a short pause so the operator sees the green.
-                if self.auto_var.get():
-                    self._auto_clear_after = self.after(1500, self.clear)
-            else:
-                self._last_verdict = "mismatch"
-                self.set_banner("✗  MISMATCH — DO NOT APPLY", "#b71c1c")
+            r = service.verify_pair(self.seed, address, asset_id)
         except Exception as exc:
-            self._last_verdict = "mismatch"
-            self.set_banner("✗  ERROR — DO NOT APPLY", "#b71c1c")
-            self.show([str(exc), "", traceback.format_exc()])
+            self._enter_error("ERROR — DO NOT APPLY",
+                              [str(exc), "", traceback.format_exc()], self.STICKER)
+            return
+
+        detail = [
+            "expected address  : {}".format(r["expected_address"]),
+            "scanned  address  : {}".format(r["scanned_address"]),
+            "expected asset id : {}".format(r["expected_asset_id"]),
+            "scanned  asset id : {}".format(r["scanned_asset_id"]),
+            "derivation        : {}".format(r["derivation"]),
+            "",
+            "address match     : {}".format("yes" if r["address_ok"] else "NO"),
+            "asset id match    : {}".format("yes" if r["asset_id_ok"] else "NO"),
+        ]
+        if r["match"]:
+            self.show(detail)
+            self._enter_match()
+        else:
+            hint = detect_service_label(self.app.services, self.seed, address)
+            if hint and hint != self.coin_var.get():
+                detail += ["", "NOTE: that sticker looks like {} — check the coin type.".format(hint)]
+            self._enter_error("MISMATCH — DO NOT APPLY", detail, self.STICKER)
+
+
 
 
 # --------------------------------------------------------------------------
