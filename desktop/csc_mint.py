@@ -160,14 +160,13 @@ def detect_service_label(services, seed_text: str, sticker_address: str) -> str 
         chain = "LTC"
     elif raw.startswith("1") or raw.startswith("3") or addr.startswith("bc1"):
         chain = "BTC"
-    elif (raw.startswith("4") or raw.startswith("8")) and len(raw) >= 90:
-        chain = "XMR"
     else:
         return None
     for label, _cls, _mod in services:
         if chain in label and str(words) in label:
             return label
     return None
+
 
 
 
