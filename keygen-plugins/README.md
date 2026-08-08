@@ -1,4 +1,4 @@
-# Seed-phrase keygen plugins (btc12 / ltc12 / dash12 / xmr12 / eth12 / eth24 / txc12 / txc24)
+# Seed-phrase keygen plugins (btc12 / ltc12 / dash12 / xmr12 / eth12 / txc12)
 
 These are the Cold Storage Coin series whose only engraved secret is a BIP-39
 seed phrase. Identical behaviour apart from the chain and the word count. The
@@ -7,9 +7,7 @@ BTC / LTC / DASH / XMR series are 12-word only.
 | File | Class | Chain | Words | Entropy |
 | --- | --- | --- | --- | --- |
 | `eth12.py` | `Eth12CoinService` | ETH / all EVM | 12 | 128-bit |
-| `eth24.py` | `Eth24CoinService` | ETH / all EVM | 24 | 256-bit |
 | `txc12.py` | `Txc12CoinService` | TEXITcoin | 12 | 128-bit |
-| `txc24.py` | `Txc24CoinService` | TEXITcoin | 24 | 256-bit |
 | `btc12.py` | `Btc12CoinService` | Bitcoin (m/44'/0') | 12 | 128-bit |
 | `ltc12.py` | `Ltc12CoinService` | Litecoin (m/44'/2') | 12 | 128-bit |
 | `dash12.py` | `Dash12CoinService` | Dash (m/44'/5') | 12 | 128-bit |
@@ -64,7 +62,7 @@ sweep/recovery tooling only — it is not part of the laser pipeline.
 ## What these plugins change vs. the legacy services
 
 - The secret of record is the **mnemonic**, not a WIF. `key.txt` contains only
-  the words (12 or 24).
+  the words (12).
 - Derivation is **standard BIP-44**: ETH on `m/44'/60'/0'/0/0` (matches
   MetaMask / Ledger Live / Rainbow, and every EVM chain), TXC on
   `m/44'/0'/0'/0/0`. The legacy BTC/LTC services derive from the BIP-44
@@ -81,14 +79,10 @@ Copy the files into `keygen/currencies/` and register them in
 
 ```python
 from keygen.currencies.eth12_crypto_coin_service import Eth12CoinService
-from keygen.currencies.eth24_crypto_coin_service import Eth24CoinService
 from keygen.currencies.txc12_crypto_coin_service import Txc12CoinService
-from keygen.currencies.txc24_crypto_coin_service import Txc24CoinService
 
 'ETH12': Eth12CoinService,
-'ETH24': Eth24CoinService,
 'TXC12': Txc12CoinService,
-'TXC24': Txc24CoinService,
 ```
 
 Add the new currencies to `get_available_currencies()` so they appear in the
@@ -98,7 +92,6 @@ keygen widget's dropdown.
 
 ```bash
 pip install bip_utils          # 1.7.0 pin and 2.x are both supported
-python eth24.py generate --count 100 --laser A --out ./out
 python txc12.py generate --count 100 --laser A --out ./out
 ```
 
@@ -116,11 +109,8 @@ the printed sticker, and confirm they belong together before applying it:
 
 ```bash
 # just show what the coin should be
-python eth24.py verify --seed "word word ... word"
 
 # compare against the scanned sticker (address[,assetId])
-python eth24.py verify --seed "word ... word" --sticker "0x839E…,839ECF"
-python txc24.py verify --seed "word ... word" --sticker "T…,agGM2c"
 ```
 
 Prints `MATCH` (exit 0) or `*** MISMATCH — DO NOT APPLY STICKER ***` (exit 1),
@@ -152,8 +142,8 @@ AttributeError: type object 'Txc12CoinService' has no attribute 'get_currency_na
 ```
 
 All four plugins expose `CURRENCY_NAME` plus classmethods
-`get_currency_name()` / `get_currency_symbol()` (`ETH12`, `ETH24`, `TXC12`,
-`TXC24`). Any new plugin must do the same.
+`get_currency_name()` / `get_currency_symbol()` (`ETH12`, `TXC12`
+). Any new plugin must do the same.
 
 ## Entropy / seed strength (audit notes)
 
@@ -166,7 +156,7 @@ only place where a weakness is fatal.
   and XORs the result with the primary draw — XOR with an independent value can
   never reduce entropy, so the output is at least as strong as
   `secrets.token_bytes(n)`.
-- Strength: **128 bits** for the 12-word variants, **256 bits** for the 24-word
+- Strength: **128 bits** for all 12-word variants.
   variants — full BIP-39 strength, no truncation, no reduced word pool.
 - Nothing is seeded from time, PID, hostname, counter or `random`. The stdlib
   `random` module is not imported anywhere in these files; output is not
