@@ -33,7 +33,9 @@ Design notes
 from __future__ import annotations
 
 import sys
+import threading as _threading
 import time
+
 
 
 _cv2 = None
@@ -349,6 +351,16 @@ class QrCameraSession:
         self._zoom = None
         self._focus = None
         self._exposure = None
+        # Decoding runs on a worker thread so the preview never stalls: the
+        # multi-engine pipeline costs 100-400ms per frame, which is exactly
+        # what made the old single-threaded loop look like 1 fps / 20s behind.
+        self._lock = _threading.Lock()
+        self._pending = None        # newest frame handed to the decoder
+        self._decoded = None        # text the worker found, picked up in _tick
+        self._decode_busy = False
+        self._worker = None
+        self._hit_until = 0.0
+
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -371,8 +383,11 @@ class QrCameraSession:
         eng = engines()
         self.on_status("camera live ({}) — hold the QR steady, 6–10in away".format(
             eng[0] if eng else "no decoder"))
+        self._worker = _threading.Thread(target=self._decode_worker, daemon=True)
+        self._worker.start()
         self._tick()
         return True
+
 
     def _configure_camera(self):
         """Push the webcam into the highest-detail mode it supports."""
@@ -472,25 +487,61 @@ class QrCameraSession:
 
     # -- frame loop --------------------------------------------------------
 
+    def _decode_worker(self):
+        """Chew on the newest frame off the UI thread; never blocks preview."""
+        while not self._stopped:
+            with self._lock:
+                frame = self._pending
+                self._pending = None
+            if frame is None:
+                time.sleep(0.01)
+                continue
+            self._decode_busy = True
+            try:
+                aggressive = self._misses > 8
+                text = decode_image(frame, aggressive=aggressive,
+                                    detector=self.detector)
+            except Exception:
+                text = ""
+            self._decode_busy = False
+            if text:
+                self._misses = 0
+                with self._lock:
+                    self._decoded = text
+            else:
+                self._misses += 1
+
     def _tick(self):
         if self._stopped or self.cap is None:
             return
         try:
-            ok, frame = self.cap.read()
+            # Drain any frames the driver buffered while the last decode ran,
+            # so what's on screen is live instead of seconds behind.
+            for _ in range(4):
+                if not self.cap.grab():
+                    break
+            ok, frame = self.cap.retrieve()
             if not ok or frame is None:
-                self._after_id = self.widget.after(30, self._tick)
+                ok, frame = self.cap.read()
+            if not ok or frame is None:
+                self._after_id = self.widget.after(15, self._tick)
                 return
 
             self._frames += 1
-            # Cheap variants every frame; the expensive pipeline every 3rd
-            # frame, or on every frame once we've been missing for a while.
-            aggressive = (self._frames % 3 == 0) or self._misses > 30
-            text = decode_image(frame, aggressive=aggressive, detector=self.detector)
+            # Hand the decoder a frame only when it's free — queuing more just
+            # builds latency.
+            if not self._decode_busy:
+                with self._lock:
+                    self._pending = frame.copy()
+
+            with self._lock:
+                text = self._decoded
+                self._decoded = None
+
             if text:
-                self._misses = 0
+                self._hit_until = time.time() + 0.35
+            if time.time() < self._hit_until:
                 self._draw_hit(frame)
-            else:
-                self._misses += 1
 
             self._draw_hud(frame)
 
@@ -515,7 +566,7 @@ class QrCameraSession:
                 if (self.continuous and text == self._last_text
                         and now - self._last_text_at < self.repeat_cooldown_ms):
                     # Same code still sitting in frame — ignore the echo.
-                    self._after_id = self.widget.after(15, self._tick)
+                    self._after_id = self.widget.after(5, self._tick)
                     return
                 self._last_text = text
                 self._last_text_at = now
@@ -533,7 +584,8 @@ class QrCameraSession:
             self.stop()
             return
 
-        self._after_id = self.widget.after(15, self._tick)
+        self._after_id = self.widget.after(5, self._tick)
+
 
     # -- overlays ----------------------------------------------------------
 

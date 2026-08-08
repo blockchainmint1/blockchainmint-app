@@ -30,6 +30,15 @@ python -c "import bip_utils; print('bip_utils', bip_utils.__version__ if hasattr
 if errorlevel 1 goto :fail
 
 echo.
+echo [2b/3] Locating the pyzbar DLLs (PyInstaller misses these on its own)...
+set "ZBAR_ARGS="
+for /f "delims=" %%i in ('python -c "import os,pyzbar;print(os.path.dirname(pyzbar.__file__))"') do set "ZBAR_DIR=%%i"
+if exist "%ZBAR_DIR%\libzbar-64.dll" set "ZBAR_ARGS=--add-binary "%ZBAR_DIR%\libzbar-64.dll;pyzbar""
+if exist "%ZBAR_DIR%\libiconv.dll" set "ZBAR_ARGS=%ZBAR_ARGS% --add-binary "%ZBAR_DIR%\libiconv.dll;pyzbar""
+if exist "%ZBAR_DIR%\libiconv-2.dll" set "ZBAR_ARGS=%ZBAR_ARGS% --add-binary "%ZBAR_DIR%\libiconv-2.dll;pyzbar""
+if "%ZBAR_ARGS%"=="" echo   WARNING: libzbar-64.dll not found - ZBar engine will be missing.
+
+echo.
 echo [3/3] Building CSCMint.exe and dropping it on your desktop...
 set "DESKTOP=%USERPROFILE%\Desktop"
 pyinstaller --noconfirm --clean --onefile --windowed ^
@@ -43,7 +52,9 @@ pyinstaller --noconfirm --clean --onefile --windowed ^
   --hidden-import crcmod --hidden-import ecdsa --hidden-import bitarray ^
   --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
   --collect-all pyzbar --hidden-import pyzbar --hidden-import pyzbar.pyzbar ^
+  %ZBAR_ARGS% ^
   csc_mint.py
+
 if errorlevel 1 goto :fail
 
 echo.
