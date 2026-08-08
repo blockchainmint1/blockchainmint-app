@@ -5,10 +5,11 @@ The offline PC needs **Python 3.11 (64-bit)** — not 3.12/3.13/3.14.
 
 ## 1. On an internet-connected Mac/PC — collect the packages
 
-One command, everything included (~37 files, **~55 MB** total — `opencv-python`
-is ~40 MB of that and is what powers the VERIFY tab's webcam QR scanning; drop
+One command, everything included (~30 files, **~40 MB** total — `opencv-python`
+is ~35 MB of that and is what powers the VERIFY tab's webcam QR scanning; drop
 `opencv-python numpy` from the list if you'll only ever use a USB
 keyboard-wedge scanner).
+
 `pip`'s resolver chokes here because `crcmod` ships source-only, so we grab the
 wheels explicitly with `--no-deps` and pull `crcmod` separately.
 
