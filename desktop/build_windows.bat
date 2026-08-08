@@ -21,7 +21,7 @@ if not exist "%~dp0keygen-plugins\txc12.py" (
 echo.
 echo [1/3] Installing build dependencies...
 python -m pip install --upgrade pip
-python -m pip install pyinstaller bip_utils coincurve cffi opencv-python numpy
+python -m pip install pyinstaller bip_utils coincurve cffi opencv-contrib-python numpy pyzbar
 if errorlevel 1 goto :fail
 
 echo.
@@ -42,6 +42,7 @@ pyinstaller --noconfirm --clean --onefile --windowed ^
   --hidden-import _cffi_backend --hidden-import cffi ^
   --hidden-import crcmod --hidden-import ecdsa --hidden-import bitarray ^
   --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
+  --collect-all pyzbar --hidden-import pyzbar --hidden-import pyzbar.pyzbar ^
   csc_mint.py
 if errorlevel 1 goto :fail
 

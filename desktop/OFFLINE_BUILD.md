@@ -5,9 +5,9 @@ The offline PC needs **Python 3.11 (64-bit)** — not 3.12/3.13/3.14.
 
 ## 1. On an internet-connected Mac/PC — collect the packages
 
-One command, everything included (~30 files, **~40 MB** total — `opencv-python`
+One command, everything included (~30 files, **~40 MB** total — `opencv-contrib-python`
 is ~35 MB of that and is what powers the VERIFY tab's webcam QR scanning; drop
-`opencv-python numpy` from the list if you'll only ever use a USB
+`opencv-contrib-python numpy pyzbar` from the list if you'll only ever use a USB
 keyboard-wedge scanner).
 
 `pip`'s resolver chokes here because `crcmod` ships source-only, so we grab the
@@ -25,7 +25,7 @@ python3 -m pip download \
   "bip_utils==2.12.1" "cbor2<6.0.0" coincurve ecdsa \
   pycryptodome cffi pycparser six bitarray \
   requests urllib3 idna charset-normalizer certifi asn1crypto base58 \
-  opencv-python numpy
+  opencv-contrib-python numpy pyzbar
 
 
 python3 -m pip download --no-deps --no-binary :all: \
@@ -101,7 +101,7 @@ Install Python 3.11 with **"Add Python to PATH"** checked, then:
 
 ```batch
 python -m pip install --no-index --find-links E:\cscmint-offline-packages ^
-  pyinstaller bip_utils opencv-python numpy
+  pyinstaller bip_utils opencv-contrib-python numpy pyzbar
 
 cd desktop
 mkdir keygen-plugins 2>nul
@@ -116,6 +116,7 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name CSCMint ^
   --hidden-import crcmod --hidden-import ecdsa --hidden-import bitarray ^
   --hidden-import cbor2 ^
   --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
+  --collect-all pyzbar --hidden-import pyzbar --hidden-import pyzbar.pyzbar ^
   csc_mint.py
 
 ```
