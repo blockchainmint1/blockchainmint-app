@@ -57,8 +57,9 @@ python.org — tick "Add Python to PATH"):
 
 1. Copy this whole repo folder to that PC (git clone, or download the ZIP).
 2. Double-click `desktop\build_windows.bat`.
-3. It produces **`desktop\dist\CSCMint.exe`** — a single self-contained file
+3. It produces **`%USERPROFILE%\Desktop\CSCMint.exe`** — a single self-contained file
    with Python, `bip_utils` and the plugins baked in.
+
 4. Put `CSCMint.exe` on a USB stick, copy it to the offline PC's desktop,
    double-click. Nothing to install over there. Ever.
 

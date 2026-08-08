@@ -125,7 +125,8 @@ analysis misses libraries that `bip_utils` imports lazily, and the failure only
 shows up when you double-click the `.exe` (`ModuleNotFoundError`), not at build
 time. Including them costs a couple of MB and saves a second USB round-trip.
 
-Output: `desktop\dist\CSCMint.exe` — a single self-contained file.
+Output: `%USERPROFILE%\Desktop\CSCMint.exe` — a single self-contained file.
+
 
 ## Troubleshooting the likely next snags
 

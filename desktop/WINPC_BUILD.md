@@ -61,10 +61,11 @@ Takes 3–6 minutes the first time.
 ## Step 4 — Find it
 
 ```
-desktop\dist\CSCMint.exe
+%USERPROFILE%\Desktop\CSCMint.exe
 ```
 
 One self-contained file. Nothing else needs to travel with it.
+
 
 ---
 
@@ -107,8 +108,9 @@ The exe is a build artifact — **do not commit it to Git.** Commit the source
 4. Record the checksum so the mint station operator can verify what they got:
 
 ```bat
-certutil -hashfile dist\CSCMint.exe SHA256
+certutil -hashfile "%USERPROFILE%\Desktop\CSCMint.exe" SHA256
 ```
+
 
 Publish that SHA-256 next to the download link. Anyone on the offline PC can
 re-run the same `certutil` command and compare before trusting the file.

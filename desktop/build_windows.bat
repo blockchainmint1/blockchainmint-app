@@ -1,8 +1,8 @@
 @echo off
 REM ---------------------------------------------------------------------
-REM  Build CSC Mint into a single .exe you can carry to the air-gapped PC.
+REM  Build CSC Mint into a single .exe and drop it on the user's desktop.
 REM  RUN THIS ON A NORMAL (internet-connected) WINDOWS MACHINE.
-REM  Then copy dist\CSCMint.exe to the offline laser PC on a USB stick.
+REM  Then copy %USERPROFILE%\Desktop\CSCMint.exe to the offline laser PC.
 REM ---------------------------------------------------------------------
 
 setlocal
@@ -30,9 +30,11 @@ python -c "import bip_utils; print('bip_utils', bip_utils.__version__ if hasattr
 if errorlevel 1 goto :fail
 
 echo.
-echo [3/3] Building CSCMint.exe...
+echo [3/3] Building CSCMint.exe and dropping it on your desktop...
+set "DESKTOP=%USERPROFILE%\Desktop"
 pyinstaller --noconfirm --clean --onefile --windowed ^
   --name CSCMint ^
+  --distpath "%DESKTOP%" ^
   --add-data "keygen-plugins;keygen-plugins" ^
   --collect-all bip_utils ^
   --collect-all coincurve --collect-binaries coincurve ^
@@ -45,7 +47,11 @@ if errorlevel 1 goto :fail
 
 echo.
 echo ==============================================
-echo  DONE.  Your app is:  %~dp0dist\CSCMint.exe
+echo  DONE.  Your app is on your Desktop at:
+echo  %DESKTOP%\CSCMint.exe
+if not exist "%DESKTOP%\CSCMint.exe" (
+  echo  WARNING: expected file was not found. Check the build log above.
+)
 echo  Copy that ONE file to the offline PC.
 echo ==============================================
 goto :eof
