@@ -383,8 +383,11 @@ class QrCameraSession:
         eng = engines()
         self.on_status("camera live ({}) — hold the QR steady, 6–10in away".format(
             eng[0] if eng else "no decoder"))
+        self._worker = _threading.Thread(target=self._decode_worker, daemon=True)
+        self._worker.start()
         self._tick()
         return True
+
 
     def _configure_camera(self):
         """Push the webcam into the highest-detail mode it supports."""
