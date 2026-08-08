@@ -30,13 +30,16 @@ python -c "import bip_utils; print('bip_utils', bip_utils.__version__ if hasattr
 if errorlevel 1 goto :fail
 
 echo.
-echo [2b/3] Locating the pyzbar DLLs (PyInstaller misses these on its own)...
+echo [2b/3] Ensuring the pyzbar DLLs are present (downloads them if missing)...
+python "%~dp0fetch_zbar_dlls.py"
+
 set "ZBAR_ARGS="
 for /f "delims=" %%i in ('python -c "import os,pyzbar;print(os.path.dirname(pyzbar.__file__))"') do set "ZBAR_DIR=%%i"
 if exist "%ZBAR_DIR%\libzbar-64.dll" set "ZBAR_ARGS=--add-binary "%ZBAR_DIR%\libzbar-64.dll;pyzbar""
 if exist "%ZBAR_DIR%\libiconv.dll" set "ZBAR_ARGS=%ZBAR_ARGS% --add-binary "%ZBAR_DIR%\libiconv.dll;pyzbar""
 if exist "%ZBAR_DIR%\libiconv-2.dll" set "ZBAR_ARGS=%ZBAR_ARGS% --add-binary "%ZBAR_DIR%\libiconv-2.dll;pyzbar""
 if "%ZBAR_ARGS%"=="" echo   WARNING: libzbar-64.dll not found - ZBar engine will be missing.
+
 
 echo.
 echo [3/3] Building CSCMint.exe and dropping it on your desktop...
