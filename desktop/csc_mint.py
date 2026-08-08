@@ -149,17 +149,27 @@ def detect_service_label(services, seed_text: str, sticker_address: str) -> str 
     words = len(seed_text.strip().split())
     if words not in (12, 24):
         return None
-    addr = sticker_address.strip().lower()
+    raw = sticker_address.strip()
+    addr = raw.lower()
     if addr.startswith("0x"):
         chain = "ETH"
-    elif addr.startswith("t") or addr.startswith("txc:") or addr.startswith("bitcoincash:"):
+    elif addr.startswith("txc:") or raw.startswith("T"):
         chain = "TXC"
+    elif raw.startswith("X") and len(raw) in range(30, 40):
+        chain = "DASH"
+    elif raw.startswith("L") or raw.startswith("M") or addr.startswith("ltc1"):
+        chain = "LTC"
+    elif raw.startswith("1") or raw.startswith("3") or addr.startswith("bc1"):
+        chain = "BTC"
+    elif (raw.startswith("4") or raw.startswith("8")) and len(raw) >= 90:
+        chain = "XMR"
     else:
         return None
     for label, _cls, _mod in services:
         if chain in label and str(words) in label:
             return label
     return None
+
 
 
 # --------------------------------------------------------------------------
