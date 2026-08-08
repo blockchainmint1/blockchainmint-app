@@ -23,11 +23,11 @@ Two tabs:
               numbers.txt   <LASER><0000> laser sequence
               wif.txt       WIF / hex private key (optional, see checkbox)
 
-  VERIFY  QA station. Two ways to scan, both offline:
-            * webcam — click SCAN SEED / SCAN STICKER (needs opencv-python)
-            * USB keyboard-wedge scanner — click into the box and scan
-          Big green MATCH or big red MISMATCH. Handles wedge scanners that eat
-          the spaces between words.
+  VERIFY  QA station. Pick the coin type, press START, and the camera runs
+          continuously: scan the seed QR, then the sticker QR. Giant green ✓
+          (SPACE = next coin) or giant red ✗ (needs a click, and resumes
+          waiting for the SAME sticker so a missed sticker scan never loses
+          the coin). USB keyboard-wedge scanners feed the manual box.
 
 Run:      python csc_mint.py
 Build exe: see build_windows.bat
@@ -51,7 +51,7 @@ except Exception:  # running as a script or frozen by PyInstaller
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import qr_camera  # type: ignore
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 APP_TITLE = f"CSC Mint v{APP_VERSION} — Blockchain Mint keygen / QA station"
 
 # --------------------------------------------------------------------------
