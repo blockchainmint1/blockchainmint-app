@@ -21,11 +21,11 @@ python3 -m pip download \
   -d ~/cscmint-offline-packages \
   pyinstaller pyinstaller-hooks-contrib altgraph macholib packaging setuptools wheel \
   pefile pywin32-ctypes importlib_metadata zipp \
-  "bip_utils==2.12.1" "cbor2<6.0.0" coincurve ecdsa ed25519-blake2b-fork \
-  pycryptodome pycryptodomex pynacl py-sr25519-bindings pytoniq-core-fork \
-  typing_extensions cffi pycparser six bitarray x25519 \
+  "bip_utils==2.12.1" "cbor2<6.0.0" coincurve ecdsa \
+  pycryptodome cffi pycparser six bitarray \
   requests urllib3 idna charset-normalizer certifi asn1crypto base58 \
   opencv-python numpy
+
 
 python3 -m pip download --no-deps --no-binary :all: \
   -d ~/cscmint-offline-packages crcmod
