@@ -33,12 +33,15 @@ echo.
 echo [2b/3] Ensuring the pyzbar DLLs are present (downloads them if missing)...
 python "%~dp0fetch_zbar_dlls.py"
 
-set "ZBAR_ARGS="
-for /f "delims=" %%i in ('python -c "import os,pyzbar;print(os.path.dirname(pyzbar.__file__))"') do set "ZBAR_DIR=%%i"
-if exist "%ZBAR_DIR%\libzbar-64.dll" set "ZBAR_ARGS=--add-binary "%ZBAR_DIR%\libzbar-64.dll;pyzbar""
-if exist "%ZBAR_DIR%\libiconv.dll" set "ZBAR_ARGS=%ZBAR_ARGS% --add-binary "%ZBAR_DIR%\libiconv.dll;pyzbar""
-if exist "%ZBAR_DIR%\libiconv-2.dll" set "ZBAR_ARGS=%ZBAR_ARGS% --add-binary "%ZBAR_DIR%\libiconv-2.dll;pyzbar""
-if "%ZBAR_ARGS%"=="" echo   WARNING: libzbar-64.dll not found - ZBar engine will be missing.
+REM NOTE: do NOT wrap these SET lines in quotes - cmd.exe chokes on the
+REM nested quotes inside --add-binary and reports
+REM   "...libiconv.dll" was unexpected at this time.
+set ZBAR_ARGS=
+if exist "%~dp0zbar_dlls\libzbar-64.dll" set ZBAR_ARGS=%ZBAR_ARGS% --add-binary "zbar_dlls\libzbar-64.dll;pyzbar"
+if exist "%~dp0zbar_dlls\libiconv.dll" set ZBAR_ARGS=%ZBAR_ARGS% --add-binary "zbar_dlls\libiconv.dll;pyzbar"
+if exist "%~dp0zbar_dlls\libiconv-2.dll" set ZBAR_ARGS=%ZBAR_ARGS% --add-binary "zbar_dlls\libiconv-2.dll;pyzbar"
+if not defined ZBAR_ARGS echo   WARNING: libzbar-64.dll not found - ZBar engine will be missing.
+
 
 
 echo.
