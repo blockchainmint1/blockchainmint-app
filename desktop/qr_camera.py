@@ -2,20 +2,32 @@
 """
 Webcam QR scanning for the CSC Mint VERIFY station.
 
-Offline. No network. Uses OpenCV's built-in QRCodeDetector (no zbar, no DLLs
-beyond what opencv-python ships).
+Offline. No network. Multi-engine decoder, in priority order:
+
+  1. WeChat QR (``cv2.wechat_qrcode.WeChatQRCode``) — ships with
+     ``opencv-contrib-python``. CNN detector + optional super-resolution.
+     By far the best on small, low-contrast, motion-blurred, or partially
+     glared codes — exactly the laser-engraved / sticker-on-shiny-gold case.
+  2. ZBar (``pyzbar``) — battle-tested C library, excellent on damaged and
+     low-resolution symbols. The Windows wheel bundles its own DLLs.
+  3. OpenCV ``QRCodeDetector`` (+ curved variant) — last-resort fallback so
+     a plain ``opencv-python`` install still works.
+
+Each engine is run over several *image variants* (raw, grayscale + CLAHE,
+unsharp-masked, adaptive-threshold, 2x upscaled centre crop). A hit from any
+engine on any variant wins. This is the single biggest accuracy lever: most
+"won't scan" cases are contrast/scale problems, not detector problems.
 
 Design notes
 ------------
 * The camera loop is driven by Tk's ``after()`` so the Tkinter mainloop stays
   responsive and everything runs on the main thread (OpenCV's HighGUI windows
   are not thread-safe on Windows).
-* The live preview is an ``cv2.imshow`` window so we don't need Pillow.
-* Closing the preview window, pressing ESC, or a successful decode all stop
-  the loop and release the camera.
-
-If ``opencv-python`` isn't installed, ``available()`` returns False and the
-caller falls back to the keyboard-wedge USB scanner flow.
+* The live preview is a ``cv2.imshow`` window so we don't need Pillow.
+* Camera is opened at 1080p MJPG with autofocus on — webcam defaults
+  (640x480, YUY2) throw away the detail a small QR needs.
+* Preview hotkeys: ESC cancel, ``+``/``-`` zoom, ``f`` autofocus toggle,
+  ``[``/``]`` manual focus, ``e``/``d`` exposure.
 """
 
 from __future__ import annotations
@@ -25,12 +37,40 @@ import time
 
 
 _cv2 = None
+_np = None
 _import_error = None
 
 try:  # pragma: no cover - environment dependent
     import cv2 as _cv2  # type: ignore
+    import numpy as _np  # type: ignore
 except Exception as exc:  # pragma: no cover
     _import_error = exc
+
+_pyzbar = None
+_pyzbar_error = None
+try:  # pragma: no cover
+    from pyzbar import pyzbar as _pyzbar  # type: ignore
+except Exception as exc:  # pragma: no cover
+    _pyzbar_error = exc
+
+# WeChat model files are optional; the detector works (without the
+# super-resolution stage) when constructed with empty paths.
+_wechat = None
+_wechat_error = None
+
+
+def _wechat_detector():
+    global _wechat, _wechat_error
+    if _wechat is not None or _wechat_error is not None:
+        return _wechat
+    if _cv2 is None:
+        return None
+    try:
+        _wechat = _cv2.wechat_qrcode.WeChatQRCode()
+    except Exception as exc:  # opencv-python (non-contrib) or missing models
+        _wechat_error = exc
+        _wechat = None
+    return _wechat
 
 
 def available() -> bool:
@@ -38,8 +78,20 @@ def available() -> bool:
     return _cv2 is not None
 
 
+def engines() -> list[str]:
+    """Names of decode engines actually usable in this build."""
+    names = []
+    if _wechat_detector() is not None:
+        names.append("WeChat QR (opencv-contrib)")
+    if _pyzbar is not None:
+        names.append("ZBar (pyzbar)")
+    if _cv2 is not None:
+        names.append("OpenCV QRCodeDetector")
+    return names
+
+
 def diagnostics() -> str:
-    """Return a human-readable report of camera readiness."""
+    """Return a human-readable report of camera + decoder readiness."""
     lines = []
     if _cv2 is None:
         lines.append("OpenCV: NOT loaded")
@@ -53,20 +105,42 @@ def diagnostics() -> str:
         lines.append("OpenCV version: {}".format(_cv2.__version__))
     except Exception:
         pass
+
+    lines.append("")
+    lines.append("Decode engines:")
+    if _wechat_detector() is not None:
+        lines.append("  [OK]   WeChat QR  — best engine (opencv-contrib-python)")
+    else:
+        lines.append("  [MISS] WeChat QR  — install opencv-contrib-python for the")
+        lines.append("                     high-accuracy CNN decoder")
+        if _wechat_error:
+            lines.append("                     ({})".format(_wechat_error))
+    if _pyzbar is not None:
+        lines.append("  [OK]   ZBar       — strong on damaged/low-res codes")
+    else:
+        lines.append("  [MISS] ZBar       — install pyzbar for a second opinion")
+        if _pyzbar_error:
+            lines.append("                     ({})".format(_pyzbar_error))
+    lines.append("  [OK]   OpenCV QRCodeDetector — fallback")
+
+    lines.append("")
     found = list_cameras()
     if found:
         lines.append("Cameras detected: {}".format(", ".join("#{}".format(i) for i in found)))
     else:
         lines.append("Cameras detected: NONE")
         lines.append("If a webcam is plugged in, try changing the camera # or reconnecting it.")
+
+    lines.append("")
+    lines.append("Preview hotkeys: ESC cancel | +/- zoom | f autofocus | [ ] focus | e/d exposure")
     return "\n".join(lines)
 
 
 def unavailable_reason() -> str:
     return (
         "OpenCV isn't installed in this build, so the camera can't be used.\n\n"
-        "Install it with:  python -m pip install opencv-python\n"
-        "(offline: copy the opencv_python wheel to the USB package folder)\n\n"
+        "Install it with:  python -m pip install opencv-contrib-python pyzbar\n"
+        "(offline: copy those wheels to the USB package folder)\n\n"
         "You can still scan with a USB keyboard-wedge QR scanner — just click "
         "into the box and scan.\n\n"
         "Details: {}".format(_import_error)
@@ -104,6 +178,150 @@ def _open(index: int):
         return None
 
 
+# ---------------------------------------------------------------------------
+# Image variants — the accuracy multiplier
+# ---------------------------------------------------------------------------
+
+def _variants(frame, aggressive: bool):
+    """Yield progressively harder-working views of one frame.
+
+    Cheap variants first so the common case stays fast; ``aggressive`` adds
+    the expensive ones (used on every Nth frame or once we're struggling).
+    """
+    yield frame
+    if _np is None:
+        return
+    try:
+        gray = _cv2.cvtColor(frame, _cv2.COLOR_BGR2GRAY)
+    except Exception:
+        return
+
+    # CLAHE: local contrast. Kills the gold-coin glare gradient that flattens
+    # a sticker's black/white into mid-grey.
+    try:
+        clahe = _cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        eq = clahe.apply(gray)
+        yield eq
+    except Exception:
+        eq = gray
+
+    # Unsharp mask: recovers edges lost to a soft/out-of-focus close-up.
+    try:
+        blur = _cv2.GaussianBlur(eq, (0, 0), 3)
+        yield _cv2.addWeighted(eq, 1.8, blur, -0.8, 0)
+    except Exception:
+        pass
+
+    if not aggressive:
+        return
+
+    # Centre crop, upscaled: a small code in the middle of a 1080p frame has
+    # too few pixels per module until we zoom into it.
+    try:
+        h, w = gray.shape[:2]
+        cy, cx = h // 2, w // 2
+        half = min(h, w) // 3
+        crop = eq[max(0, cy - half):cy + half, max(0, cx - half):cx + half]
+        if crop.size:
+            yield _cv2.resize(crop, None, fx=2.0, fy=2.0, interpolation=_cv2.INTER_CUBIC)
+    except Exception:
+        pass
+
+    # Adaptive threshold: hard binarisation for engraved/etched codes where
+    # the "black" is just a duller shade of metal.
+    try:
+        yield _cv2.adaptiveThreshold(
+            eq, 255, _cv2.ADAPTIVE_THRESH_GAUSSIAN_C, _cv2.THRESH_BINARY, 31, 5
+        )
+    except Exception:
+        pass
+
+    # Otsu on a blurred copy: good for printed stickers under uneven light.
+    try:
+        soft = _cv2.GaussianBlur(eq, (5, 5), 0)
+        _t, otsu = _cv2.threshold(soft, 0, 255, _cv2.THRESH_BINARY + _cv2.THRESH_OTSU)
+        yield otsu
+    except Exception:
+        pass
+
+
+def _decode_wechat(img) -> str:
+    det = _wechat_detector()
+    if det is None:
+        return ""
+    try:
+        texts, _pts = det.detectAndDecode(img)
+        for t in texts or ():
+            if t and t.strip():
+                return t.strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _decode_zbar(img) -> str:
+    if _pyzbar is None:
+        return ""
+    try:
+        for sym in _pyzbar.decode(img):
+            try:
+                t = sym.data.decode("utf-8", "ignore").strip()
+            except Exception:
+                continue
+            if t:
+                return t
+    except Exception:
+        pass
+    return ""
+
+
+def _decode_opencv(img, detector) -> str:
+    if detector is None:
+        return ""
+    try:
+        ok, texts, _pts, _straight = detector.detectAndDecodeMulti(img)
+        if ok and texts:
+            for t in texts:
+                if t and t.strip():
+                    return t.strip()
+    except Exception:
+        pass
+    try:
+        text, pts, _straight = detector.detectAndDecode(img)
+        if text and text.strip():
+            return text.strip()
+    except Exception:
+        pass
+    # Curved: engraved codes on a domed coin face read as warped grids.
+    try:
+        text, _pts, _straight = detector.detectAndDecodeCurved(img)
+        if text and text.strip():
+            return text.strip()
+    except Exception:
+        pass
+    return ""
+
+
+def decode_image(img, aggressive: bool = True, detector=None) -> str:
+    """Run every available engine over every variant. First hit wins."""
+    if _cv2 is None:
+        return ""
+    if detector is None:
+        try:
+            detector = _cv2.QRCodeDetector()
+        except Exception:
+            detector = None
+    for variant in _variants(img, aggressive):
+        for fn in (_decode_wechat, _decode_zbar):
+            text = fn(variant)
+            if text:
+                return text
+        text = _decode_opencv(variant, detector)
+        if text:
+            return text
+    return ""
+
+
 class QrCameraSession:
     """One live-preview scanning session bound to a Tk widget's event loop."""
 
@@ -126,7 +344,11 @@ class QrCameraSession:
         self._after_id = None
         self._last_text = None
         self._last_text_at = 0.0
-
+        self._frames = 0
+        self._misses = 0
+        self._zoom = None
+        self._focus = None
+        self._exposure = None
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -139,21 +361,41 @@ class QrCameraSession:
             self.on_status("could not open camera #{}".format(self.camera_index))
             self.stop()
             return False
-        # 720p gives the detector enough pixels for a small engraved QR.
-        try:
-            self.cap.set(_cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            self.cap.set(_cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        except Exception:
-            pass
+        self._configure_camera()
         self.detector = _cv2.QRCodeDetector()
         try:
             _cv2.namedWindow(self.window_title, _cv2.WINDOW_NORMAL)
-            _cv2.resizeWindow(self.window_title, 720, 480)
+            _cv2.resizeWindow(self.window_title, 900, 600)
         except Exception:
             pass
-        self.on_status("camera live — hold the QR steady in frame")
+        eng = engines()
+        self.on_status("camera live ({}) — hold the QR steady, 6–10in away".format(
+            eng[0] if eng else "no decoder"))
         self._tick()
         return True
+
+    def _configure_camera(self):
+        """Push the webcam into the highest-detail mode it supports."""
+        cap = self.cap
+        def _set(prop, value):
+            try:
+                cap.set(prop, value)
+            except Exception:
+                pass
+        # MJPG first: most USB webcams only offer 1080p over MJPG, and the
+        # default YUY2 caps them at 640x480 — far too few pixels for a small QR.
+        try:
+            _set(_cv2.CAP_PROP_FOURCC, _cv2.VideoWriter_fourcc(*"MJPG"))
+        except Exception:
+            pass
+        _set(_cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        _set(_cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        if (cap.get(_cv2.CAP_PROP_FRAME_WIDTH) or 0) < 1200:
+            _set(_cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            _set(_cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        _set(_cv2.CAP_PROP_BUFFERSIZE, 1)   # always decode the newest frame
+        _set(_cv2.CAP_PROP_AUTOFOCUS, 1)
+        _set(_cv2.CAP_PROP_FPS, 30)
 
     def stop(self):
         if self._stopped:
@@ -182,6 +424,52 @@ class QrCameraSession:
                 except Exception:
                     break
 
+    # -- manual camera controls -------------------------------------------
+
+    def _bump(self, prop, attr, delta, lo, hi):
+        cap = self.cap
+        if cap is None:
+            return
+        cur = getattr(self, attr)
+        if cur is None:
+            try:
+                cur = cap.get(prop)
+            except Exception:
+                cur = lo
+        cur = max(lo, min(hi, (cur or lo) + delta))
+        setattr(self, attr, cur)
+        try:
+            cap.set(prop, cur)
+        except Exception:
+            pass
+        self.on_status("{} = {:.0f}".format(attr.strip("_"), cur))
+
+    def _handle_key(self, key) -> bool:
+        """Return False when the session should stop."""
+        if key == 27:  # ESC
+            self.on_status("camera cancelled")
+            return False
+        if key in (ord("+"), ord("=")):
+            self._bump(_cv2.CAP_PROP_ZOOM, "_zoom", 20, 0, 500)
+        elif key in (ord("-"), ord("_")):
+            self._bump(_cv2.CAP_PROP_ZOOM, "_zoom", -20, 0, 500)
+        elif key == ord("f"):
+            try:
+                self.cap.set(_cv2.CAP_PROP_AUTOFOCUS,
+                             0 if self.cap.get(_cv2.CAP_PROP_AUTOFOCUS) else 1)
+                self.on_status("autofocus toggled")
+            except Exception:
+                pass
+        elif key == ord("["):
+            self._bump(_cv2.CAP_PROP_FOCUS, "_focus", -5, 0, 255)
+        elif key == ord("]"):
+            self._bump(_cv2.CAP_PROP_FOCUS, "_focus", 5, 0, 255)
+        elif key == ord("e"):
+            self._bump(_cv2.CAP_PROP_EXPOSURE, "_exposure", 1, -13, 0)
+        elif key == ord("d"):
+            self._bump(_cv2.CAP_PROP_EXPOSURE, "_exposure", -1, -13, 0)
+        return True
+
     # -- frame loop --------------------------------------------------------
 
     def _tick(self):
@@ -193,15 +481,25 @@ class QrCameraSession:
                 self._after_id = self.widget.after(30, self._tick)
                 return
 
-            text = self._decode(frame)
+            self._frames += 1
+            # Cheap variants every frame; the expensive pipeline every 3rd
+            # frame, or on every frame once we've been missing for a while.
+            aggressive = (self._frames % 3 == 0) or self._misses > 30
+            text = decode_image(frame, aggressive=aggressive, detector=self.detector)
+            if text:
+                self._misses = 0
+                self._draw_hit(frame)
+            else:
+                self._misses += 1
+
+            self._draw_hud(frame)
 
             try:
                 _cv2.imshow(self.window_title, frame)
                 key = _cv2.waitKey(1) & 0xFF
             except Exception:
                 key = 255
-            if key == 27:  # ESC
-                self.on_status("camera cancelled")
+            if key != 255 and not self._handle_key(key):
                 self.stop()
                 return
             try:
@@ -237,32 +535,25 @@ class QrCameraSession:
 
         self._after_id = self.widget.after(15, self._tick)
 
-    def _decode(self, frame) -> str:
-        """Return decoded QR text, or '' when this frame has none."""
-        # detectAndDecodeMulti catches codes that are off-centre or paired with
-        # a second code in frame; fall back to the single-code path.
-        try:
-            ok, texts, _pts, _straight = self.detector.detectAndDecodeMulti(frame)
-            if ok and texts:
-                for t in texts:
-                    if t and t.strip():
-                        self._draw_hit(frame)
-                        return t.strip()
-        except Exception:
-            pass
-        try:
-            text, pts, _straight = self.detector.detectAndDecode(frame)
-            if text and text.strip():
-                if pts is not None:
-                    self._draw_hit(frame)
-                return text.strip()
-        except Exception:
-            pass
-        return ""
+    # -- overlays ----------------------------------------------------------
 
     def _draw_hit(self, frame):
         try:
             h, w = frame.shape[:2]
             _cv2.rectangle(frame, (0, 0), (w - 1, h - 1), (0, 220, 0), 12)
+        except Exception:
+            pass
+
+    def _draw_hud(self, frame):
+        try:
+            h, w = frame.shape[:2]
+            # Aim box: keeps the operator inside the high-res centre crop.
+            half = min(h, w) // 3
+            cy, cx = h // 2, w // 2
+            _cv2.rectangle(frame, (cx - half, cy - half), (cx + half, cy + half),
+                           (200, 200, 200), 1)
+            _cv2.putText(frame, "ESC cancel  +/- zoom  f autofocus  [ ] focus  e/d exposure",
+                         (12, h - 14), _cv2.FONT_HERSHEY_SIMPLEX, 0.5, (230, 230, 230), 1,
+                         _cv2.LINE_AA)
         except Exception:
             pass
