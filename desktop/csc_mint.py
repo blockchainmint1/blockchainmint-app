@@ -65,7 +65,12 @@ PLUGIN_FILES = [
     ("TXC — 12 word seed", "txc12.py", "Txc12CoinService"),
     ("ETH / EVM — 24 word seed", "eth24.py", "Eth24CoinService"),
     ("ETH / EVM — 12 word seed", "eth12.py", "Eth12CoinService"),
+    ("BTC — 12 word seed", "btc12.py", "Btc12CoinService"),
+    ("LTC — 12 word seed", "ltc12.py", "Ltc12CoinService"),
+    ("DASH — 12 word seed", "dash12.py", "Dash12CoinService"),
+    ("XMR — 12 word seed", "xmr12.py", "Xmr12CoinService"),
 ]
+
 
 
 def _candidate_dirs():
