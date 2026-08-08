@@ -7,8 +7,21 @@ import { Link } from "@tanstack/react-router";
 export function Footer() {
   return (
     <footer className="border-t border-border/60 bg-background/60 px-5 py-6 text-center text-xs text-muted-foreground">
-      <p>{"\n"}</p>
+      <p>
+        Part of the{" "}
+        <a
+          href="https://honest.money"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          honest.money
+        </a>{" "}
+        ecosystem.
+      </p>
       <ul className="mt-2 flex items-center justify-center gap-4">
+        <li><Link to="/downloads" className="hover:text-foreground">CSC Mint</Link></li>
+        <li aria-hidden>·</li>
         <li><Link to="/manifesto" className="hover:text-foreground">Manifesto</Link></li>
         <li aria-hidden>·</li>
         <li><Link to="/terms" className="hover:text-foreground">Terms</Link></li>
