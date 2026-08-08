@@ -110,10 +110,11 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name CSCMint ^
   --hidden-import coincurve --hidden-import coincurve._cffi_backend ^
   --hidden-import _cffi_backend --hidden-import cffi ^
   --hidden-import Cryptodome --hidden-import Crypto ^
-  --hidden-import crcmod --hidden-import ecdsa --hidden-import nacl ^
-  --hidden-import bitarray --hidden-import cbor2 ^
+  --hidden-import crcmod --hidden-import ecdsa --hidden-import bitarray ^
+  --hidden-import cbor2 ^
   --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
   csc_mint.py
+
 ```
 
 The extra `--hidden-import` flags are pre-emptive: PyInstaller's static
