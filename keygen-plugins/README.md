@@ -156,8 +156,8 @@ only place where a weakness is fatal.
   and XORs the result with the primary draw — XOR with an independent value can
   never reduce entropy, so the output is at least as strong as
   `secrets.token_bytes(n)`.
-- Strength: **128 bits** for all 12-word variants.
-  variants — full BIP-39 strength, no truncation, no reduced word pool.
+- Strength: **128 bits** for all 12-word variants — full BIP-39 strength, no
+  truncation, no reduced word pool.
 - Nothing is seeded from time, PID, hostname, counter or `random`. The stdlib
   `random` module is not imported anywhere in these files; output is not
   reproducible by design.
