@@ -71,7 +71,7 @@ One self-contained file. Nothing else needs to travel with it.
 ## Step 5 — Smoke test it (5 minutes, do not skip)
 
 1. Double-click `CSCMint.exe`.
-2. **MINT tab** → coin type `TXC 24`, count `2`, output to a scratch folder → MINT.
+2. **MINT tab** → coin type `TXC — 12 word seed`, count `2`, output to a scratch folder → MINT.
 3. Open the batch folder. You should see `keypair.txt`, `key.txt`,
    `labels.txt`, `snip.txt`, `numbers.txt`.
 4. **VERIFY tab** → click **Camera diagnostics**.
@@ -135,6 +135,6 @@ this app is that a bad build silently mislabels real coins.
 | --- | --- |
 | `'python' is not recognized` | PATH box wasn't ticked. Re-run the installer → Modify → Add to PATH. |
 | `No module named coincurve._cffi_backend` | Stale build. Delete `desktop\build` and `desktop\dist`, re-run `build_windows.bat`. |
-| `keygen-plugins\txc24.py not found` | You're running the bat from outside the repo. `cd` into the repo's `desktop` folder first. |
+| `keygen-plugins\txc12.py not found` | You're running the bat from outside the repo. `cd` into the repo's `desktop` folder first. |
 | Camera never opens | Close Teams/Zoom/Camera app — Windows only lets one process own the webcam. |
 | `pygame.error: WASAPI...` | That's the *old* csc-manager app, not this one. See `README.md`. |

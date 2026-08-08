@@ -5,7 +5,7 @@ CSC Mint — Blockchain Mint Cold Storage Coin keygen + QA station.
 Ugly. Bulletproof. Offline. Zero network code anywhere in this file.
 
 Replaces csc-manager-ui on the air-gapped laser PC. It drives the same coin
-service plugins that live in ../keygen-plugins (txc12/24, eth12/24, btc12,
+service plugins that live in ../keygen-plugins (txc12, eth12, btc12,
 ltc12, dash12, xmr12),
 so there is exactly ONE implementation of the crypto and it is the one already
 reviewed and tested.
@@ -62,9 +62,7 @@ APP_TITLE = f"CSC Mint v{APP_VERSION} — Blockchain Mint keygen / QA station"
 # --------------------------------------------------------------------------
 
 PLUGIN_FILES = [
-    ("TXC — 24 word seed", "txc24.py", "Txc24CoinService"),
     ("TXC — 12 word seed", "txc12.py", "Txc12CoinService"),
-    ("ETH / EVM — 24 word seed", "eth24.py", "Eth24CoinService"),
     ("ETH / EVM — 12 word seed", "eth12.py", "Eth12CoinService"),
     ("BTC — 12 word seed", "btc12.py", "Btc12CoinService"),
     ("LTC — 12 word seed", "ltc12.py", "Ltc12CoinService"),
@@ -148,7 +146,7 @@ def load_services(directory=None):
 def detect_service_label(services, seed_text: str, sticker_address: str) -> str | None:
     """Pick the right plugin from seed word count + sticker address format."""
     words = len(seed_text.strip().split())
-    if words not in (12, 24):
+    if words != 12:
         return None
     raw = sticker_address.strip()
     addr = raw.lower()
@@ -199,7 +197,7 @@ class App(tk.Tk):
                 "No coin plugins found",
                 "Could not load any coin service plugins.\n\nSearched:\n{}\n\n{}\n\n"
                 "Click Retry to browse for the 'keygen-plugins' folder "
-                "(the one containing txc24.py), or Cancel to quit.".format(
+                "(the one containing txc12.py), or Cancel to quit.".format(
                     searched, "\n".join(errors) or "(directory empty)"
                 ),
             )

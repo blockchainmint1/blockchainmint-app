@@ -56,8 +56,8 @@ cd /d "%~dp0"
 REM ---- make a local copy of the plugins so --add-data can never miss them ----
 if not exist "%~dp0keygen-plugins" mkdir "%~dp0keygen-plugins"
 copy /y "%~dp0..\keygen-plugins\*.py" "%~dp0keygen-plugins\" >nul
-if not exist "%~dp0keygen-plugins\txc24.py" (
-    echo ERROR: keygen-plugins\txc24.py not found. Copy the repo's keygen-plugins
+if not exist "%~dp0keygen-plugins\txc12.py" (
+    echo ERROR: keygen-plugins\txc12.py not found. Copy the repo's keygen-plugins
     echo        folder next to this desktop folder and re-run.
     goto :fail
 )
