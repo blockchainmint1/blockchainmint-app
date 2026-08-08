@@ -6,7 +6,7 @@ Ugly. Bulletproof. Offline. Zero network code anywhere in this file.
 
 Replaces csc-manager-ui on the air-gapped laser PC. It drives the same coin
 service plugins that live in ../keygen-plugins (txc12, eth12, btc12,
-ltc12, dash12, xmr12),
+ltc12, dash12),
 so there is exactly ONE implementation of the crypto and it is the one already
 reviewed and tested.
 
