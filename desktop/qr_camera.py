@@ -211,12 +211,23 @@ class QrCameraSession:
                 pass
 
             if text:
-                self.stop()
+                now = time.time() * 1000.0
+                if (self.continuous and text == self._last_text
+                        and now - self._last_text_at < self.repeat_cooldown_ms):
+                    # Same code still sitting in frame — ignore the echo.
+                    self._after_id = self.widget.after(15, self._tick)
+                    return
+                self._last_text = text
+                self._last_text_at = now
+                if not self.continuous:
+                    self.stop()
                 try:
                     self.on_result(text)
                 except Exception as exc:
                     self.on_status("scan handler failed: {}".format(exc))
-                return
+                if not self.continuous or self._stopped:
+                    return
+
         except Exception as exc:
             self.on_status("camera error: {}".format(exc))
             self.stop()
