@@ -73,8 +73,8 @@ If anything is missing it prints, for example:
 
 ```text
 MISSING (2):
-  - pycryptodomex   (needed by: pytoniq-core-fork)
-  - bitarray        (needed by: pytoniq-core-fork)
+  - cffi            (needed by: coincurve)
+  - bitarray        (needed by: bip_utils)
 
 Run this on an internet-connected machine to grab them all at once:
 ...
