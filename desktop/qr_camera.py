@@ -349,6 +349,16 @@ class QrCameraSession:
         self._zoom = None
         self._focus = None
         self._exposure = None
+        # Decoding runs on a worker thread so the preview never stalls: the
+        # multi-engine pipeline costs 100-400ms per frame, which is exactly
+        # what made the old single-threaded loop look like 1 fps / 20s behind.
+        self._lock = _threading.Lock()
+        self._pending = None        # newest frame handed to the decoder
+        self._decoded = None        # text the worker found, picked up in _tick
+        self._decode_busy = False
+        self._worker = None
+        self._hit_until = 0.0
+
 
     # -- lifecycle ---------------------------------------------------------
 
