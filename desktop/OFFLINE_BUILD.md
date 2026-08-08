@@ -39,9 +39,11 @@ another "could not find a version that satisfies…" round-trip.
 Verify before unplugging the USB:
 
 ```zsh
-ls ~/cscmint-offline-packages | wc -l   # expect 37
-du -sh ~/cscmint-offline-packages       # expect ~55M (11M without opencv)
+ls ~/cscmint-offline-packages | wc -l   # expect ~30
+
+du -sh ~/cscmint-offline-packages       # expect ~40M (~10M without opencv)
 ```
+
 
 `pywin32-ctypes` and `pefile` are Windows-only PyInstaller dependencies, but
 they download fine on a Mac because of the `--platform win_amd64` flag.
