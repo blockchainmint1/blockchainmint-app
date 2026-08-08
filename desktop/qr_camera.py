@@ -33,7 +33,9 @@ Design notes
 from __future__ import annotations
 
 import sys
+import threading as _threading
 import time
+
 
 
 _cv2 = None
