@@ -54,6 +54,13 @@ That script does everything: installs `pyinstaller`, `bip_utils`, `coincurve`,
 `opencv-contrib-python`, `numpy`, `pyzbar`, copies `..\keygen-plugins` in beside the app, and
 runs PyInstaller with the flags that bundle the crypto and camera binaries.
 
+It also runs `fetch_zbar_dlls.py`, which checks for ZBar's native DLLs
+(`libzbar-64.dll` and `libiconv.dll`) next to the installed `pyzbar` and
+re-downloads the official Windows wheel to recover any that are missing —
+so the ZBar decode engine always makes it into the exe. Needs internet;
+offline builds skip this and rely on the wheels already in the USB folder.
+
+
 Takes 3–6 minutes the first time.
 
 ---
