@@ -45,7 +45,7 @@ if errorlevel 1 goto :fail
 REM ---- install dependencies ------------------------------------------------
 echo.
 echo [4/4] Installing pyinstaller and bip_utils ...
-"%PY_DIR%\python.exe" -m pip install --no-warn-script-location pyinstaller bip_utils coincurve cffi opencv-python numpy
+"%PY_DIR%\python.exe" -m pip install --no-warn-script-location pyinstaller bip_utils coincurve cffi opencv-contrib-python numpy pyzbar
 if errorlevel 1 goto :fail
 
 REM ---- build the exe -------------------------------------------------------
@@ -70,6 +70,7 @@ if not exist "%~dp0keygen-plugins\txc12.py" (
   --hidden-import coincurve --hidden-import coincurve._cffi_backend ^
   --hidden-import _cffi_backend --hidden-import cffi ^
   --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
+  --collect-all pyzbar --hidden-import pyzbar --hidden-import pyzbar.pyzbar ^
   --distpath "%DIST_DIR%" ^
   --workpath "%BUILD_DIR%\pyi-work" ^
   csc_mint.py

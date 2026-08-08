@@ -51,7 +51,7 @@ build_windows.bat
 ```
 
 That script does everything: installs `pyinstaller`, `bip_utils`, `coincurve`,
-`opencv-python`, `numpy`, copies `..\keygen-plugins` in beside the app, and
+`opencv-contrib-python`, `numpy`, `pyzbar`, copies `..\keygen-plugins` in beside the app, and
 runs PyInstaller with the flags that bundle the crypto and camera binaries.
 
 Takes 3–6 minutes the first time.
