@@ -106,16 +106,25 @@ class QrCameraSession:
     """One live-preview scanning session bound to a Tk widget's event loop."""
 
     def __init__(self, widget, on_result, on_status=None, camera_index=0,
-                 window_title="Scan QR — ESC to cancel"):
+                 window_title="Scan QR — ESC to cancel",
+                 continuous=False, repeat_cooldown_ms=2500):
         self.widget = widget
         self.on_result = on_result
         self.on_status = on_status or (lambda _msg: None)
         self.camera_index = camera_index
         self.window_title = window_title
+        # continuous=True keeps the camera running after a decode so the
+        # station can take the seed scan and the sticker scan back-to-back
+        # without the operator touching anything.
+        self.continuous = continuous
+        self.repeat_cooldown_ms = repeat_cooldown_ms
         self.cap = None
         self.detector = None
         self._stopped = False
         self._after_id = None
+        self._last_text = None
+        self._last_text_at = 0.0
+
 
     # -- lifecycle ---------------------------------------------------------
 
