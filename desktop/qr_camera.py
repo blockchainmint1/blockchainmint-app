@@ -21,6 +21,8 @@ caller falls back to the keyboard-wedge USB scanner flow.
 from __future__ import annotations
 
 import sys
+import time
+
 
 _cv2 = None
 _import_error = None
