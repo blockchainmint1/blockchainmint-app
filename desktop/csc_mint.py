@@ -5,7 +5,8 @@ CSC Mint — Blockchain Mint Cold Storage Coin keygen + QA station.
 Ugly. Bulletproof. Offline. Zero network code anywhere in this file.
 
 Replaces csc-manager-ui on the air-gapped laser PC. It drives the same coin
-service plugins that live in ../keygen-plugins (txc12, txc24, eth12, eth24),
+service plugins that live in ../keygen-plugins (txc12/24, eth12/24, btc12,
+ltc12, dash12, xmr12),
 so there is exactly ONE implementation of the crypto and it is the one already
 reviewed and tested.
 
