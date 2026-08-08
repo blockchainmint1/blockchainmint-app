@@ -76,6 +76,18 @@ def download_wheel(dest: str) -> str | None:
     return None
 
 
+def mirror_local(target: str) -> None:
+    """Copy the DLLs next to this script so the build can use a short, quote-safe path."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    local = os.path.join(here, "zbar_dlls")
+    os.makedirs(local, exist_ok=True)
+    for name in WANTED:
+        src = os.path.join(target, name)
+        if os.path.exists(src):
+            shutil.copyfile(src, os.path.join(local, name))
+    print("Local ZBar DLL folder: {}".format(local))
+
+
 def main() -> int:
     target = pyzbar_dir()
     if not target:
@@ -84,6 +96,7 @@ def main() -> int:
     gaps = missing(target)
     if not gaps:
         print("ZBar DLLs already present in {}".format(target))
+        mirror_local(target)
         return 0
 
     print("Missing from {}: {}".format(target, ", ".join(gaps)))
@@ -118,6 +131,7 @@ def main() -> int:
         print("Still missing: {} (build will warn)".format(", ".join(still)))
     else:
         print("All ZBar DLLs are in place.")
+    mirror_local(target)
     return 0
 
 
