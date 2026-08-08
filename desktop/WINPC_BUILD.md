@@ -78,13 +78,21 @@ One self-contained file. Nothing else needs to travel with it.
    - "camera #0 found" = webcam ready.
    - "no cameras detected" but OpenCV loaded = build is fine, just no camera plugged in.
    - "no camera support" = the OpenCV bundle failed; rebuild.
-5. Paste the first seed from `key.txt` into the SEED box, press Enter.
-6. Paste the matching line from `labels.txt` into the STICKER box, press Enter.
-7. You should get the giant green **✓ MATCH**. Press **space** to advance.
-8. Now paste a *wrong* sticker line. You must get the red **✗ MISMATCH**, and it
-   must **not** auto-advance.
+5. Pick the coin type (default `TXC — 12 word seed`) and click the big **START**.
+   The stage goes blue: `WAITING FOR SEED QR`.
+6. Paste the first seed from `key.txt` into the **Manual / USB scanner** box
+   (or scan it with the camera). The stage switches to
+   `WAITING FOR PUBLIC KEY STICKER` and shows the expected address.
+7. Feed the matching line from `labels.txt`. You get the giant green **✓**.
+   Press **space** — it clears and starts the next coin at the seed step.
+8. Repeat, but feed a *wrong* sticker: giant red **✗**, space does nothing, and
+   the **CLEAR ERROR** button returns you to
+   `WAITING FOR PUBLIC KEY STICKER` for the *same* coin.
+9. Repeat, but feed the *next seed* instead of a sticker: red
+   **STICKER MISSED — that was a seed**, and clearing it still waits for the
+   original sticker.
 
-If all 8 pass, the build is good.
+If all 9 pass, the build is good.
 
 ---
 
