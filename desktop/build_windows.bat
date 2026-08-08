@@ -40,7 +40,6 @@ pyinstaller --noconfirm --clean --onefile --windowed ^
   --hidden-import _cffi_backend --hidden-import cffi ^
   --hidden-import crcmod --hidden-import ecdsa --hidden-import bitarray ^
   --collect-all cv2 --hidden-import cv2 --hidden-import numpy ^
-
   csc_mint.py
 if errorlevel 1 goto :fail
 
