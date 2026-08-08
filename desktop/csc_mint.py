@@ -50,7 +50,8 @@ except Exception:  # running as a script or frozen by PyInstaller
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import qr_camera  # type: ignore
 
-APP_TITLE = "CSC Mint — Blockchain Mint keygen / QA station"
+APP_VERSION = "1.2.0"
+APP_TITLE = f"CSC Mint v{APP_VERSION} — Blockchain Mint keygen / QA station"
 
 # --------------------------------------------------------------------------
 # Plugin discovery
