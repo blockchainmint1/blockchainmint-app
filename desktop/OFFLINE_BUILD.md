@@ -143,10 +143,22 @@ python -m pip install --no-index --find-links E:\cscmint-offline-packages ^
 `--no-build-isolation` matters offline: without it pip tries to fetch a fresh
 `setuptools` from PyPI to build the sdist.
 
-**VERIFY tab says "no camera support in this build"** — `opencv-python` wasn't
-installed when you built. Install it from the USB folder and rebuild with
+**VERIFY tab says "no camera support in this build"** — `opencv-contrib-python`
+wasn't installed when you built. Install it from the USB folder and rebuild with
 `--collect-all cv2`. The USB keyboard-wedge scanner path keeps working either
 way.
+
+**Camera diagnostics says "WeChat QR — MISS"** — you have plain `opencv-python`
+installed, which lacks the high-accuracy CNN decoder. Fix it with:
+
+```bat
+python -m pip uninstall -y opencv-python opencv-contrib-python
+python -m pip install --no-index --find-links=C:\cscmint-offline-packages opencv-contrib-python pyzbar
+```
+
+then rebuild. The two OpenCV wheels conflict — only `opencv-contrib-python`
+may be installed.
+
 
 **Camera opens black / "could not open camera #0"** — click **Find cameras** in
 the VERIFY tab to probe indexes 0-4 and pick the right one; laptops often put
