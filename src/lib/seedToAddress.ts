@@ -137,10 +137,10 @@ export function parseSticker(
   return { address, assetId: assetId.toUpperCase(), chain };
 }
 
-function txcAddressFromPublicKey(pubkeyCompressed: Uint8Array): string {
+function addressFromPublicKey(version: number, pubkeyCompressed: Uint8Array): string {
   const pkh20 = ripemd160(sha256(pubkeyCompressed));
   const payload = new Uint8Array(1 + pkh20.length);
-  payload[0] = TXC_PUBKEY_VERSION;
+  payload[0] = version;
   payload.set(pkh20, 1);
   return base58check(sha256).encode(payload);
 }
