@@ -67,6 +67,7 @@ PLUGIN_FILES = [
     ("BTC — 12 word seed", "btc12.py", "Btc12CoinService"),
     ("LTC — 12 word seed", "ltc12.py", "Ltc12CoinService"),
     ("DASH — 12 word seed", "dash12.py", "Dash12CoinService"),
+    ("ISK — 12 word seed", "isk12.py", "Isk12CoinService"),
 ]
 
 
@@ -152,8 +153,11 @@ def detect_service_label(services, seed_text: str, sticker_address: str) -> str 
     addr = raw.lower()
     if addr.startswith("0x"):
         chain = "ETH"
-    elif addr.startswith("txc:") or raw.startswith("T"):
+    elif addr.startswith("txc:") or addr.startswith("txc1") or raw.startswith("T"):
         chain = "TXC"
+    # Iskander Coin — legacy P2PKH version 0x2D ("K…"), bech32 hrp "isk".
+    elif addr.startswith("isk:") or addr.startswith("isk1") or raw.startswith("K"):
+        chain = "ISK"
     elif raw.startswith("X") and len(raw) in range(30, 40):
         chain = "DASH"
     elif raw.startswith("L") or raw.startswith("M") or addr.startswith("ltc1"):
