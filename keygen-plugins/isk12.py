@@ -10,7 +10,7 @@ Drop this file into the `keygen` package used by csc-manager-ui
 
     from keygen.currencies.isk12_crypto_coin_service import Isk12CoinService
     ...
-    'ISK24': Isk12CoinService,
+    'ISK12': Isk12CoinService,
 
 ------------------------------------------------------------------------------
 Why this exists
@@ -24,9 +24,9 @@ exactly ONE chain. Isk12 mints the Iskander Coin edition:
   * Standard BIP-44 derivation, so the phrase also restores in any wallet for
     whatever other chain the holder wants to use later.
 
-Iskander Coin mainnet params (chainparams.cpp, blockchainmint1/texitcoin):
-    PUBKEY_ADDRESS = 66 (0x2d, "T…")   SCRIPT_ADDRESS = 5 (0x05)
-    SECRET_KEY     = 193 (0xAD)        bech32 hrp     = "isk"
+Iskander Coin (ISK) mainnet params:
+    PUBKEY_ADDRESS = 45 (0x2D, "K…")   SCRIPT_ADDRESS = 44 (0x2C)
+    SECRET_KEY     = 173 (0xAD)        bech32 hrp     = "isk"
 Iskander Coin's registered SLIP-44 coin type is 969696, so keys derive at
 m/44'/969696'/0'/0/0 -- the same path the ISK web wallet uses.
 Override with --coin-type if that ever changes.
@@ -41,7 +41,7 @@ Standalone use (no keygen package required)
     python isk12.py verify --seed "word word ... word"
 
     # QA station: scan the seed AND the sticker, confirm they belong together
-    python isk12.py verify --seed "word ... word" --sticker "Txxxxxxx,ABC123"
+    python isk12.py verify --seed "word ... word" --sticker "Kxxxxxxx,ABC123"
 
 Requires: bip_utils (1.7.0 pin or 2.x both work)
 """
@@ -109,8 +109,8 @@ WORDS_COUNT = 12
 ENTROPY_BYTES = 16  # 128 bits — BIP-39 strength for 12 words
 
 # Iskander Coin mainnet version bytes.
-ISK_PUBKEY_VERSION = 0x2d   # 66 -> "T…" legacy P2PKH
-ISK_SECRET_VERSION = 0xAD   # 193 -> WIF
+ISK_PUBKEY_VERSION = 0x2D   # 45 -> "K…" legacy P2PKH
+ISK_SECRET_VERSION = 0xAD   # 173 -> WIF
 ISK_DEFAULT_COIN_TYPE = 969696   # Iskander Coin's registered SLIP-44 coin type
 
 
