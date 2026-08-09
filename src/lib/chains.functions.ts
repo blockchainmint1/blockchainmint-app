@@ -65,9 +65,11 @@ type EsploraConfig = {
   txUrl: (txid: string) => string;
 };
 
-const ESPLORA: Record<"btc" | "txc", EsploraConfig> = {
+const ESPLORA: Record<"btc" | "txc" | "iskander", EsploraConfig> = {
   btc: { chain: "btc", base: "https://mempool.space",          txUrl: t => `https://mempool.space/tx/${t}` },
   txc: { chain: "txc", base: "https://mempool.texitcoin.org",  txUrl: t => `https://mempool.texitcoin.org/tx/${t}` },
+  // Iskander Coin — Esplora-compatible indexer.
+  iskander: { chain: "iskander", base: "https://mempool.iskandercoin.com", txUrl: t => `https://mempool.iskandercoin.com/tx/${t}` },
 };
 
 async function esploraSummary(cfg: EsploraConfig, address: string): Promise<AddressSummary> {
