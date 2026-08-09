@@ -215,8 +215,10 @@ class App(tk.Tk):
         nb.pack(fill="both", expand=True, padx=8, pady=8)
         self.mint_tab = MintTab(nb, self)
         self.verify_tab = VerifyTab(nb, self)
+        self.scanner_tab = ScannerTab(nb, self)
         nb.add(self.mint_tab, text="  MINT  ")
-        nb.add(self.verify_tab, text="  VERIFY  ")
+        nb.add(self.verify_tab, text="  VERIFY (CAMERA)  ")
+        nb.add(self.scanner_tab, text="  VERIFY (SCANNER)  ")
 
         status = "Plugins: {}   |   {}".format(
             ", ".join(l for l, _c, _m in self.services), plugin_dir()
