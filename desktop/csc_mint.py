@@ -215,8 +215,10 @@ class App(tk.Tk):
         nb.pack(fill="both", expand=True, padx=8, pady=8)
         self.mint_tab = MintTab(nb, self)
         self.verify_tab = VerifyTab(nb, self)
+        self.scanner_tab = ScannerTab(nb, self)
         nb.add(self.mint_tab, text="  MINT  ")
-        nb.add(self.verify_tab, text="  VERIFY  ")
+        nb.add(self.verify_tab, text="  VERIFY (CAMERA)  ")
+        nb.add(self.scanner_tab, text="  VERIFY (SCANNER)  ")
 
         status = "Plugins: {}   |   {}".format(
             ", ".join(l for l, _c, _m in self.services), plugin_dir()
@@ -755,6 +757,316 @@ class VerifyTab(ttk.Frame):
                 detail += ["", "NOTE: that sticker looks like {} — check the coin type.".format(hint)]
             self._enter_error("MISMATCH — DO NOT APPLY", detail, self.STICKER)
 
+
+class ScannerTab(ttk.Frame):
+    """USB barcode-scanner (keyboard wedge) QA station.
+
+    Same logic as the camera station, different input path: a hidden capture
+    field that always holds focus. A Zebra-style scanner types the payload and
+    presses Enter, which submits one scan.
+
+        idle    → big ARM SCANNER button
+        seed    → armed, waiting for the seed barcode
+        sticker → seed accepted, waiting for the public-key sticker
+        match   → giant green ✓ ; SPACEBAR arms the next coin
+        error   → giant red ✗ ; needs a click, then resumes where it failed
+    """
+
+    IDLE, SEED, STICKER, MATCH, ERROR = "idle", "seed", "sticker", "match", "error"
+
+    def __init__(self, parent, app: App):
+        super().__init__(parent)
+        self.app = app
+        self.state = self.IDLE
+        self.resume_state = self.SEED
+        self.seed = ""
+        self.expected_address = ""
+        self.expected_asset_id = ""
+
+        top = ttk.Frame(self)
+        top.pack(fill="x", padx=12, pady=(12, 4))
+        ttk.Label(top, text="Coin type", font=BIG).pack(side="left")
+        labels = app.service_labels()
+        default = next((l for l in labels if "TXC" in l and "12" in l), labels[0])
+        self.coin_var = tk.StringVar(value=default)
+        ttk.Combobox(
+            top, textvariable=self.coin_var, values=labels,
+            state="readonly", width=28, font=BIG,
+        ).pack(side="left", padx=8)
+        ttk.Button(top, text="Stop / Reset", command=self.reset_station).pack(side="right")
+
+        self.stage = tk.Frame(self, bg="#222", height=220)
+        self.stage.pack(fill="x", padx=12, pady=(6, 0))
+        self.stage.pack_propagate(False)
+
+        self.start_btn = tk.Button(
+            self.stage, text="⌨  ARM SCANNER", font=("Segoe UI", 36, "bold"),
+            bg="#0d47a1", fg="white", activebackground="#1565c0",
+            activeforeground="white", command=self.start_station,
+        )
+        self.start_btn.pack(expand=True, fill="both", padx=40, pady=30)
+
+        self.verdict = tk.Label(self.stage, text="", font=("Segoe UI", 96, "bold"),
+                                bg="#222", fg="white")
+        self.banner = tk.Label(self, text="press ARM SCANNER to begin", font=GIANT,
+                               bg="#333", fg="white", height=2)
+        self.banner.pack(fill="x", padx=12)
+
+        self.ack_btn = tk.Button(self, text="CLEAR ERROR  (click to continue)",
+                                 font=HUGE, bg="#b71c1c", fg="white",
+                                 activebackground="#c62828", activeforeground="white",
+                                 command=self.ack_error)
+
+        info = ttk.Frame(self)
+        info.pack(fill="x", padx=12, pady=(8, 0))
+        self.seed_label = tk.Label(info, text="seed     : —", font=MONO, anchor="w",
+                                   justify="left", wraplength=920)
+        self.seed_label.pack(fill="x")
+        self.addr_label = tk.Label(info, text="expected : —", font=MONO, anchor="w",
+                                   justify="left", wraplength=920)
+        self.addr_label.pack(fill="x")
+
+        cap = ttk.Frame(self)
+        cap.pack(fill="x", padx=12, pady=(8, 0))
+        ttk.Label(cap, text="Scanner input:", font=MONO).pack(side="left")
+        self.capture_var = tk.StringVar()
+        self.capture = tk.Entry(cap, textvariable=self.capture_var, font=MONO)
+        self.capture.pack(side="left", fill="x", expand=True, padx=6)
+        self.capture.bind("<Return>", self._submit)
+        self.capture.bind("<KP_Enter>", self._submit)
+        self.capture.bind("<Key-space>", self._capture_space)
+        self.capture.bind("<FocusOut>", self._refocus_soon)
+        ttk.Button(cap, text="Enter", command=lambda: self._submit(None)).pack(side="left")
+
+        self.detail = tk.Text(self, height=8, font=MONO, bg="#111", fg="#ddd", wrap="none")
+        self.detail.pack(fill="both", expand=True, padx=12, pady=10)
+
+        for widget in (self, self.banner, self.stage, self.verdict, self.detail):
+            widget.bind("<Key-space>", self._on_space)
+
+    # -- stage rendering ----------------------------------------------------
+
+    def _show_start(self):
+        self.verdict.pack_forget()
+        self.ack_btn.pack_forget()
+        self.start_btn.pack(expand=True, fill="both", padx=40, pady=30)
+        self.stage.config(bg="#222")
+
+    def _show_armed(self, text):
+        self.start_btn.pack_forget()
+        self.ack_btn.pack_forget()
+        self.verdict.config(text=text, font=("Segoe UI", 40, "bold"),
+                            bg="#102a43", fg="#8fd3ff")
+        self.stage.config(bg="#102a43")
+        self.verdict.pack(expand=True, fill="both")
+
+    def _show_verdict(self, symbol, color):
+        self.start_btn.pack_forget()
+        self.verdict.config(text=symbol, font=("Segoe UI", 110, "bold"), bg=color, fg="white")
+        self.stage.config(bg=color)
+        self.verdict.pack(expand=True, fill="both")
+
+    def set_banner(self, text, color):
+        self.banner.config(text=text, bg=color)
+
+    def show(self, lines):
+        self.detail.delete("1.0", "end")
+        self.detail.insert("end", "\n".join(lines))
+
+    # -- focus plumbing -----------------------------------------------------
+
+    def _arm_capture(self):
+        self.capture_var.set("")
+        self.capture.focus_set()
+
+    def _refocus_soon(self, _event=None):
+        """Keep the wedge target focused while the station is live."""
+        if self.state in (self.SEED, self.STICKER):
+            self.after(50, self._focus_if_live)
+
+    def _focus_if_live(self):
+        if self.state in (self.SEED, self.STICKER):
+            self.capture.focus_set()
+
+    # -- state machine ------------------------------------------------------
+
+    def start_station(self):
+        self.seed = ""
+        self.expected_address = ""
+        self.expected_asset_id = ""
+        self.seed_label.config(text="seed     : —")
+        self.addr_label.config(text="expected : —")
+        self._enter_seed()
+
+    def _enter_seed(self):
+        self.state = self.SEED
+        self.resume_state = self.SEED
+        self._show_armed("⌨  SCAN SEED")
+        self.set_banner("WAITING FOR SEED BARCODE", "#0d47a1")
+        self._arm_capture()
+
+    def _enter_sticker(self):
+        self.state = self.STICKER
+        self.resume_state = self.STICKER
+        self._show_armed("⌨  SCAN STICKER")
+        self.set_banner("WAITING FOR PUBLIC KEY STICKER", "#4a3800")
+        self._arm_capture()
+
+    def _enter_match(self):
+        self.state = self.MATCH
+        self.capture_var.set("")
+        self.ack_btn.pack_forget()
+        self._show_verdict("✓", "#1b5e20")
+        self.set_banner("MATCH — apply the sticker, then press SPACE", "#1b5e20")
+        self.focus_set()
+
+    def _enter_error(self, headline, lines, resume_state):
+        self.state = self.ERROR
+        self.resume_state = resume_state
+        self.capture_var.set("")
+        self._show_verdict("✗", "#b71c1c")
+        self.set_banner(headline, "#b71c1c")
+        self.ack_btn.pack(fill="x", padx=12, pady=(6, 0))
+        self.show(lines)
+        self.focus_set()
+
+    def ack_error(self):
+        self.ack_btn.pack_forget()
+        if self.resume_state == self.STICKER and self.seed:
+            self._enter_sticker()
+        else:
+            self.start_station()
+
+    def reset_station(self):
+        self.state = self.IDLE
+        self.seed = ""
+        self.expected_address = ""
+        self.expected_asset_id = ""
+        self.seed_label.config(text="seed     : —")
+        self.addr_label.config(text="expected : —")
+        self.capture_var.set("")
+        self.show([])
+        self._show_start()
+        self.set_banner("press ARM SCANNER to begin", "#333")
+
+    # -- input --------------------------------------------------------------
+
+    def _on_space(self, _event=None):
+        if self.state == self.MATCH:
+            self.start_station()
+        return "break"
+
+    def _capture_space(self, _event):
+        """A space inside the capture field is part of a seed phrase — unless
+        the station is showing a verdict, where it means 'next coin'."""
+        if self.state == self.MATCH:
+            self.start_station()
+            return "break"
+        return None
+
+    def _submit(self, _event=None):
+        text = self.capture_var.get().strip()
+        self.capture_var.set("")
+        if not text:
+            return "break"
+        if self.state in (self.IDLE, self.MATCH):
+            self.start_station()
+        self.on_scan(text)
+        return "break"
+
+    @staticmethod
+    def _looks_like_seed(text: str) -> bool:
+        return len(text.strip().split()) >= 12
+
+    def on_scan(self, text: str):
+        text = (text or "").strip()
+        if not text:
+            return
+        if self.state == self.SEED:
+            self._handle_seed(text)
+        elif self.state == self.STICKER:
+            self._handle_sticker(text)
+
+    def _handle_seed(self, text):
+        if not self._looks_like_seed(text):
+            self._enter_error(
+                "THAT'S NOT A SEED — scan the laser-etched code",
+                ["scanned: {}".format(text)],
+                self.SEED,
+            )
+            return
+        try:
+            service, _mod = self.app.service_for(self.coin_var.get())
+            coin = service.get_coin_from_mnemonic(text)
+            asset_id = service.generate_asset_id(coin)
+        except Exception as exc:
+            self._enter_error(
+                "BAD SEED — do not ship this coin",
+                [str(exc), "", "scanned: {}".format(text)],
+                self.SEED,
+            )
+            return
+        self.seed = coin.seed
+        self.expected_address = coin.address
+        self.expected_asset_id = asset_id
+        self.seed_label.config(text="seed     : {}".format(coin.seed))
+        self.addr_label.config(text="expected : {}   ({})".format(coin.address, asset_id))
+        self.show([
+            "coin type      : {}".format(self.coin_var.get()),
+            "derivation     : {}".format(service.derivation_path()),
+            "expect address : {}".format(coin.address),
+            "expect assetID : {}".format(asset_id),
+            "",
+            "Now scan the sticker.",
+        ])
+        self._enter_sticker()
+
+    def _handle_sticker(self, text):
+        if self._looks_like_seed(text):
+            self._enter_error(
+                "STICKER MISSED — that was a seed",
+                [
+                    "You scanned a seed phrase while the station was waiting",
+                    "for a sticker.",
+                    "",
+                    "Still waiting for : {}".format(self.expected_address),
+                    "assetID           : {}".format(self.expected_asset_id),
+                    "",
+                    "Clear this error and scan the sticker for THIS coin.",
+                ],
+                self.STICKER,
+            )
+            return
+
+        parts = [p.strip() for p in text.replace("\t", ",").split(",") if p.strip()]
+        address = parts[0]
+        asset_id = parts[1] if len(parts) > 1 else None
+        try:
+            service, _mod = self.app.service_for(self.coin_var.get())
+            r = service.verify_pair(self.seed, address, asset_id)
+        except Exception as exc:
+            self._enter_error("ERROR — DO NOT APPLY",
+                              [str(exc), "", traceback.format_exc()], self.STICKER)
+            return
+
+        detail = [
+            "expected address  : {}".format(r["expected_address"]),
+            "scanned  address  : {}".format(r["scanned_address"]),
+            "expected asset id : {}".format(r["expected_asset_id"]),
+            "scanned  asset id : {}".format(r["scanned_asset_id"]),
+            "derivation        : {}".format(r["derivation"]),
+            "",
+            "address match     : {}".format("yes" if r["address_ok"] else "NO"),
+            "asset id match    : {}".format("yes" if r["asset_id_ok"] else "NO"),
+        ]
+        if r["match"]:
+            self.show(detail)
+            self._enter_match()
+        else:
+            hint = detect_service_label(self.app.services, self.seed, address)
+            if hint and hint != self.coin_var.get():
+                detail += ["", "NOTE: that sticker looks like {} — check the coin type.".format(hint)]
+            self._enter_error("MISMATCH — DO NOT APPLY", detail, self.STICKER)
 
 
 
