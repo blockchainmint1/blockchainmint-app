@@ -987,6 +987,7 @@ class ScannerTab(ttk.Frame):
 
     def reset_station(self):
         self.state = self.IDLE
+        self._cancel_auto()
         self.seed = ""
         self.expected_address = ""
         self.expected_asset_id = ""
@@ -1013,6 +1014,7 @@ class ScannerTab(ttk.Frame):
         return None
 
     def _submit(self, _event=None):
+        self._cancel_auto()
         text = self.capture_var.get().strip()
         self.capture_var.set("")
         if not text:
