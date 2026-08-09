@@ -528,6 +528,7 @@ export async function summarize(chain: ChainId, address: string): Promise<Addres
     const tokens = await omniTokensForAddress(address).catch(() => undefined);
     return tokens ? { ...base, tokens } : base;
   }
+  if (chain === "iskander") return esploraSummary(ESPLORA.iskander, address);
   if (chain === "eth") return ethSummary(address);
   if (chain === "ltc" || chain === "doge" || chain === "bch") return blockchairSummary(chain, address);
   if (chain === "ada") return adaSummary(address);
