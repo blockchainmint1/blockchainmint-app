@@ -841,6 +841,11 @@ class ScannerTab(ttk.Frame):
         self.capture.bind("<Key-space>", self._capture_space)
         self.capture.bind("<FocusOut>", self._refocus_soon)
         ttk.Button(cap, text="Enter", command=lambda: self._submit(None)).pack(side="left")
+        # auto-advance: scanners type fast, so a short quiet period means the
+        # payload is complete — no Enter keypress required.
+        self._auto_job = None
+        self.capture_var.trace_add("write", self._on_capture_change)
+
 
         self.detail = tk.Text(self, height=8, font=MONO, bg="#111", fg="#ddd", wrap="none")
         self.detail.pack(fill="both", expand=True, padx=12, pady=10)
