@@ -882,11 +882,50 @@ class ScannerTab(ttk.Frame):
         self.detail.delete("1.0", "end")
         self.detail.insert("end", "\n".join(lines))
 
+    # -- auto-advance -------------------------------------------------------
+
+    AUTO_QUIET_MS = 180   # quiet period after the last keystroke
+    AUTO_STICKER_MIN = 12  # shortest plausible address payload
+
+    def _cancel_auto(self):
+        if self._auto_job is not None:
+            try:
+                self.after_cancel(self._auto_job)
+            except Exception:
+                pass
+            self._auto_job = None
+
+    def _on_capture_change(self, *_args):
+        self._cancel_auto()
+        if self.state not in (self.SEED, self.STICKER):
+            return
+        if not self.capture_var.get().strip():
+            return
+        self._auto_job = self.after(self.AUTO_QUIET_MS, self._auto_submit)
+
+    def _auto_submit(self):
+        self._auto_job = None
+        text = self.capture_var.get().strip()
+        if not text:
+            return
+        if self.state == self.SEED:
+            # only fire once a full phrase has landed; a partial burst waits
+            if not self._looks_like_seed(text):
+                return
+        elif self.state == self.STICKER:
+            if len(text) < self.AUTO_STICKER_MIN:
+                return
+        else:
+            return
+        self._submit(None)
+
     # -- focus plumbing -----------------------------------------------------
 
     def _arm_capture(self):
+        self._cancel_auto()
         self.capture_var.set("")
         self.capture.focus_set()
+
 
     def _refocus_soon(self, _event=None):
         """Keep the wedge target focused while the station is live."""
