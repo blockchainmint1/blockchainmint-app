@@ -1,4 +1,4 @@
-# Seed-phrase keygen plugins (btc12 / ltc12 / dash12 / eth12 / txc12)
+# Seed-phrase keygen plugins (btc12 / ltc12 / dash12 / eth12 / txc12 / isk12)
 
 These are the Cold Storage Coin series whose only engraved secret is a BIP-39
 seed phrase. Identical behaviour apart from the chain and the word count. The
@@ -7,7 +7,8 @@ BTC / LTC / DASH series are 12-word only.
 | File | Class | Chain | Words | Entropy |
 | --- | --- | --- | --- | --- |
 | `eth12.py` | `Eth12CoinService` | ETH / all EVM | 12 | 128-bit |
-| `txc12.py` | `Txc12CoinService` | TEXITcoin | 12 | 128-bit |
+| `txc12.py` | `Txc12CoinService` | TEXITcoin (m/44'/696969') | 12 | 128-bit |
+| `isk12.py` | `Isk12CoinService` | Iskander Coin (m/44'/969696') | 12 | 128-bit |
 | `btc12.py` | `Btc12CoinService` | Bitcoin (m/44'/0') | 12 | 128-bit |
 | `ltc12.py` | `Ltc12CoinService` | Litecoin (m/44'/2') | 12 | 128-bit |
 | `dash12.py` | `Dash12CoinService` | Dash (m/44'/5') | 12 | 128-bit |
