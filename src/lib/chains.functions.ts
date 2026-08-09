@@ -543,6 +543,7 @@ export async function summarize(chain: ChainId, address: string): Promise<Addres
 async function history(chain: ChainId, address: string): Promise<TxRecord[]> {
   if (chain === "btc") return esploraHistory(ESPLORA.btc, address);
   if (chain === "txc") return esploraHistory(ESPLORA.txc, address);
+  if (chain === "iskander") return esploraHistory(ESPLORA.iskander, address);
   if (chain === "eth") return ethHistory(address);
   if (chain === "ltc" || chain === "doge" || chain === "bch") return blockchairHistory(chain, address);
   if (chain === "ada") return adaHistory(address);
