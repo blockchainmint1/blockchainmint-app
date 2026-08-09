@@ -65,9 +65,11 @@ type EsploraConfig = {
   txUrl: (txid: string) => string;
 };
 
-const ESPLORA: Record<"btc" | "txc", EsploraConfig> = {
+const ESPLORA: Record<"btc" | "txc" | "iskander", EsploraConfig> = {
   btc: { chain: "btc", base: "https://mempool.space",          txUrl: t => `https://mempool.space/tx/${t}` },
   txc: { chain: "txc", base: "https://mempool.texitcoin.org",  txUrl: t => `https://mempool.texitcoin.org/tx/${t}` },
+  // Iskander Coin — Esplora-compatible indexer.
+  iskander: { chain: "iskander", base: "https://mempool.iskandercoin.com", txUrl: t => `https://mempool.iskandercoin.com/tx/${t}` },
 };
 
 async function esploraSummary(cfg: EsploraConfig, address: string): Promise<AddressSummary> {
@@ -526,6 +528,7 @@ export async function summarize(chain: ChainId, address: string): Promise<Addres
     const tokens = await omniTokensForAddress(address).catch(() => undefined);
     return tokens ? { ...base, tokens } : base;
   }
+  if (chain === "iskander") return esploraSummary(ESPLORA.iskander, address);
   if (chain === "eth") return ethSummary(address);
   if (chain === "ltc" || chain === "doge" || chain === "bch") return blockchairSummary(chain, address);
   if (chain === "ada") return adaSummary(address);
@@ -540,6 +543,7 @@ export async function summarize(chain: ChainId, address: string): Promise<Addres
 async function history(chain: ChainId, address: string): Promise<TxRecord[]> {
   if (chain === "btc") return esploraHistory(ESPLORA.btc, address);
   if (chain === "txc") return esploraHistory(ESPLORA.txc, address);
+  if (chain === "iskander") return esploraHistory(ESPLORA.iskander, address);
   if (chain === "eth") return ethHistory(address);
   if (chain === "ltc" || chain === "doge" || chain === "bch") return blockchairHistory(chain, address);
   if (chain === "ada") return adaHistory(address);

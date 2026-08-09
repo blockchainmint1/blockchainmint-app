@@ -33,7 +33,7 @@ type BtcLikeParams = {
   bech32Hrp: string | null;
 };
 
-const BTC_PARAMS: Record<"btc" | "ltc" | "doge" | "bch" | "txc", BtcLikeParams> = {
+const BTC_PARAMS: Record<"btc" | "ltc" | "doge" | "bch" | "txc" | "iskander", BtcLikeParams> = {
   btc:  { wifVersion: 0x80, p2pkhVersion: 0x00, p2shVersion: 0x05, bech32Hrp: "bc"  },
   ltc:  { wifVersion: 0xb0, p2pkhVersion: 0x30, p2shVersion: 0x32, bech32Hrp: "ltc" },
   doge: { wifVersion: 0x9e, p2pkhVersion: 0x1e, p2shVersion: 0x16, bech32Hrp: null  },
@@ -43,6 +43,9 @@ const BTC_PARAMS: Record<"btc" | "ltc" | "doge" | "bch" | "txc", BtcLikeParams> 
   // SCRIPT_ADDRESS=5 (0x05), SECRET_KEY=193 (0xC1), bech32 hrp = "txc".
   // SCRIPT_ADDRESS2=65 (0x41) also exists as an alternate P2SH prefix.
   txc:  { wifVersion: 0xc1, p2pkhVersion: 0x42, p2shVersion: 0x05, bech32Hrp: "txc" },
+  // Iskander Coin (ISK) — Bitcoin-derived fork. PUBKEY_ADDRESS=45 (0x2D, "K…"),
+  // SCRIPT_ADDRESS=44 (0x2C), SECRET_KEY=173 (0xAD), bech32 hrp = "isk".
+  iskander: { wifVersion: 0xad, p2pkhVersion: 0x2d, p2shVersion: 0x2c, bech32Hrp: "isk" },
 };
 
 const ALL_WIF_PREFIXES = Array.from(new Set(Object.values(BTC_PARAMS).map(p => p.wifVersion)));
@@ -198,7 +201,7 @@ function derivePublicAddresses(
   // BTC-family — derive every reasonable address type. We always try BOTH
   // compressed and uncompressed pubkey hashes because old coins are sometimes
   // engraved with uncompressed keys.
-  for (const chain of ["btc", "ltc", "doge", "bch", "txc"] as const) {
+  for (const chain of ["btc", "ltc", "doge", "bch", "txc", "iskander"] as const) {
     const params = BTC_PARAMS[chain];
     const addrs: string[] = [];
     for (const pub of [pubCompressed, pubUncompressed]) {
@@ -220,7 +223,7 @@ function derivePublicAddresses(
 
   // Which chains is this key a plausible sweep candidate for? Everything we
   // derived for, ordered with hex-friendly chains first.
-  const candidates: ChainId[] = ["eth", "btc", "ltc", "doge", "bch", "txc"];
+  const candidates: ChainId[] = ["eth", "btc", "ltc", "doge", "bch", "txc", "iskander"];
 
   return {
     ok: true,

@@ -81,7 +81,9 @@ function ScanPage() {
         toast.error("Scan the coin's seed phrase first.");
         return;
       }
-      const expected = scanned.result;
+      // Match against the derived address for whichever chain the sticker is.
+      const expected =
+        scanned.result.candidates.find(c => c.chain === sticker.chain) ?? scanned.result;
       setStickerResult({
         address: sticker.address,
         assetId: sticker.assetId,
@@ -94,13 +96,13 @@ function ScanPage() {
     // If something is already shown, don't keep scanning until reset.
     if (scanned) return;
 
-    // 1. Try to interpret it as a BIP-39 seed phrase for TXC QA.
+    // 1. Try to interpret it as a BIP-39 seed phrase for TXC / ISK QA.
     const seed = parseSeedPhrase(text);
     if (seed.ok) {
       setScanned({ type: "seed", result: seed });
       setChain("txc");
       setAddress(seed.address);
-      toast.success(`Detected ${seed.wordCount}-word TXC seed phrase.`);
+      toast.success(`Detected ${seed.wordCount}-word seed phrase.`);
       return;
     }
 
