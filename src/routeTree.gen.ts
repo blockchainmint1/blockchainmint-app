@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as RecoverRouteImport } from './routes/recover'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ManifestoRouteImport } from './routes/manifesto'
 import { Route as HandoffRouteImport } from './routes/handoff'
@@ -31,6 +32,11 @@ import { Route as AppVerifyChainAddressRouteImport } from './routes/_app.verify.
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecoverRoute = RecoverRouteImport.update({
+  id: '/recover',
+  path: '/recover',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/handoff': typeof HandoffRoute
   '/manifesto': typeof ManifestoRoute
   '/privacy': typeof PrivacyRoute
+  '/recover': typeof RecoverRoute
   '/terms': typeof TermsRoute
   '/alerts': typeof AppAlertsRoute
   '/home': typeof AppHomeRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/handoff': typeof HandoffRoute
   '/manifesto': typeof ManifestoRoute
   '/privacy': typeof PrivacyRoute
+  '/recover': typeof RecoverRoute
   '/terms': typeof TermsRoute
   '/alerts': typeof AppAlertsRoute
   '/home': typeof AppHomeRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/handoff': typeof HandoffRoute
   '/manifesto': typeof ManifestoRoute
   '/privacy': typeof PrivacyRoute
+  '/recover': typeof RecoverRoute
   '/terms': typeof TermsRoute
   '/_app/alerts': typeof AppAlertsRoute
   '/_app/home': typeof AppHomeRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/handoff'
     | '/manifesto'
     | '/privacy'
+    | '/recover'
     | '/terms'
     | '/alerts'
     | '/home'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/handoff'
     | '/manifesto'
     | '/privacy'
+    | '/recover'
     | '/terms'
     | '/alerts'
     | '/home'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/handoff'
     | '/manifesto'
     | '/privacy'
+    | '/recover'
     | '/terms'
     | '/_app/alerts'
     | '/_app/home'
@@ -246,6 +258,7 @@ export interface RootRouteChildren {
   HandoffRoute: typeof HandoffRoute
   ManifestoRoute: typeof ManifestoRoute
   PrivacyRoute: typeof PrivacyRoute
+  RecoverRoute: typeof RecoverRoute
   TermsRoute: typeof TermsRoute
   ApiPublicHooksWatchTickRoute: typeof ApiPublicHooksWatchTickRoute
 }
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recover': {
+      id: '/recover'
+      path: '/recover'
+      fullPath: '/recover'
+      preLoaderRoute: typeof RecoverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -415,6 +435,7 @@ const rootRouteChildren: RootRouteChildren = {
   HandoffRoute: HandoffRoute,
   ManifestoRoute: ManifestoRoute,
   PrivacyRoute: PrivacyRoute,
+  RecoverRoute: RecoverRoute,
   TermsRoute: TermsRoute,
   ApiPublicHooksWatchTickRoute: ApiPublicHooksWatchTickRoute,
 }
