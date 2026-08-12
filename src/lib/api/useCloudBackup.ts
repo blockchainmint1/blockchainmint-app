@@ -58,7 +58,7 @@ export function useCloudBackup() {
       }
       setState("done");
       setMessage(
-        `Backed up ${coins.length} ${coins.length === 1 ? "coin" : "coins"}` +
+        `Saved ${coins.length} ${coins.length === 1 ? "coin" : "coins"}` +
           (pulled ? ` · restored ${pulled} from cloud` : ""),
       );
     } catch (e) {
