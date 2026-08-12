@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useVerifyMintRecord, useLookupAssetId } from "@/lib/api/backendClient";
 import { useBackend } from "@/lib/backend";
-import { CHAIN_OPTIONS, CHAINS, cscId, type ChainId } from "@/lib/chains";
+import { CHAINS, cscId, type ChainId } from "@/lib/chains";
 import { ShieldCheck, Coins, Keyboard, QrCode, CheckCircle2, XCircle, ScanLine, Hash, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { QrScanner } from "@/components/QrScanner";
@@ -44,10 +44,14 @@ function ScanPage() {
 
   const verifyFn = useVerifyMintRecord();
 
+  const detected = detectChain(address.trim());
+  const effectiveChain = detected?.chain ?? chain;
+  const effectiveAddress = detected?.address ?? address.trim();
+
   const verify = useMutation({
-    mutationFn: () => verifyFn({ data: { chain, address: address.trim() } }),
+    mutationFn: () => verifyFn({ data: { chain: effectiveChain, address: effectiveAddress } }),
     onSuccess: () => {
-      navigate({ to: "/verify/$chain/$address", params: { chain, address: address.trim() } });
+      navigate({ to: "/verify/$chain/$address", params: { chain: effectiveChain, address: effectiveAddress } });
     },
     onError: e => toast.error((e as Error).message),
   });
@@ -348,18 +352,6 @@ function ScanPage() {
           />
 
           <label className="block">
-            <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Chain</span>
-            <select
-              value={chain}
-              onChange={e => setChain(e.target.value as ChainId)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm focus:border-ring focus:outline-none"
-            >
-              {CHAIN_OPTIONS.map(c => (
-                <option key={c.id} value={c.id}>{c.name} ({c.ticker}){c.liveInPhase1 ? "" : " — Phase 3"}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
             <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Address</span>
             <input
               type="text" value={address} onChange={e => setAddress(e.target.value)}
@@ -367,6 +359,15 @@ function ScanPage() {
               className="w-full rounded-md border border-input bg-background px-3 py-2.5 font-mono text-xs focus:border-ring focus:outline-none"
             />
           </label>
+
+          {effectiveChain && address.trim() && (
+            <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/40 px-3 py-2">
+              <CoinLogo chain={effectiveChain} size={24} />
+              <span className="text-sm text-foreground">{CHAINS[effectiveChain].name} ({CHAINS[effectiveChain].ticker})</span>
+              <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Auto-detected</span>
+            </div>
+          )}
+
           <label className="block">
             <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Label (optional)</span>
             <input
