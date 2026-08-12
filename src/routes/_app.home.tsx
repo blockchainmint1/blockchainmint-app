@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueries } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
 import { useLookupAddress } from "@/lib/api/backendClient";
 import { useBackend } from "@/lib/backend";

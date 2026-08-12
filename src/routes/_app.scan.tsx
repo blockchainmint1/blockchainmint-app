@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useVerifyMintRecord, useLookupAssetId } from "@/lib/api/backendClient";
 import { useBackend } from "@/lib/backend";
 import { CHAIN_OPTIONS, CHAINS, cscId, type ChainId } from "@/lib/chains";
@@ -412,6 +411,7 @@ function ScanPage() {
  */
 function AuthenticityBadge({ chain, address }: { chain: ChainId; address: string }) {
   const verifyFn = useVerifyMintRecord();
+  const { backend } = useBackend();
   const { data, isLoading } = useQuery({
     queryKey: ["mint-verify", backend, chain, address],
     queryFn: () => verifyFn({ data: { chain, address } }),

@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useLookupAddress, useVerifyMintRecord } from "@/lib/api/backendClient";
 import { useBackend } from "@/lib/backend";
 import { CoinMedallion } from "@/components/CoinMedallion";
