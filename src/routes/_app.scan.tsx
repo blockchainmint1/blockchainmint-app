@@ -352,18 +352,6 @@ function ScanPage() {
           />
 
           <label className="block">
-            <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Chain</span>
-            <select
-              value={chain}
-              onChange={e => setChain(e.target.value as ChainId)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm focus:border-ring focus:outline-none"
-            >
-              {CHAIN_OPTIONS.map(c => (
-                <option key={c.id} value={c.id}>{c.name} ({c.ticker}){c.liveInPhase1 ? "" : " — Phase 3"}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
             <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Address</span>
             <input
               type="text" value={address} onChange={e => setAddress(e.target.value)}
@@ -371,6 +359,15 @@ function ScanPage() {
               className="w-full rounded-md border border-input bg-background px-3 py-2.5 font-mono text-xs focus:border-ring focus:outline-none"
             />
           </label>
+
+          {effectiveChain && address.trim() && (
+            <div className="flex items-center gap-2 rounded-md border border-border bg-secondary/40 px-3 py-2">
+              <CoinLogo chain={effectiveChain} size={24} />
+              <span className="text-sm text-foreground">{CHAINS[effectiveChain].name} ({CHAINS[effectiveChain].ticker})</span>
+              <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Auto-detected</span>
+            </div>
+          )}
+
           <label className="block">
             <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Label (optional)</span>
             <input
