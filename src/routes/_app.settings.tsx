@@ -36,11 +36,11 @@ function SettingsPage() {
             {ready && user ? (
               <>
                 <p className="truncate text-sm text-foreground">{user.email ?? "Signed in"}</p>
-                <p className="text-[11px] text-muted-foreground">Backup is on — {coins.length} {coins.length === 1 ? "coin" : "coins"} on this device.</p>
+                <p className="text-[11px] text-muted-foreground">Coin list saved — {coins.length} {coins.length === 1 ? "coin" : "coins"} on this device.</p>
               </>
             ) : (
               <>
-                <p className="text-sm text-foreground">No backup yet</p>
+                <p className="text-sm text-foreground">No saved list yet</p>
                 <p className="text-[11px] text-muted-foreground">{coins.length} {coins.length === 1 ? "coin lives" : "coins live"} only on this device.</p>
               </>
             )}
@@ -51,7 +51,7 @@ function SettingsPage() {
             onClick={() => navigate({ to: "/auth" })}
             className="mt-3 w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
-            Back up my coins
+            Save my coin list
           </button>
         )}
       </section>
