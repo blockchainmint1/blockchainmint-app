@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { LogOut, FileText, Shield, BookOpen, ExternalLink, CloudUpload, UserCircle2, DownloadCloud } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
 import { BackendSwitcher } from "@/components/BackendSwitcher";
+import { CloudBackupCard } from "@/components/CloudBackupCard";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "Settings — Blockchain Mint" }] }),
@@ -56,6 +57,8 @@ function SettingsPage() {
       </section>
 
       <BackendSwitcher />
+
+      <CloudBackupCard />
 
       <ul className="space-y-2">
         <SettingLink to="/import" icon={<DownloadCloud className="size-4" />} title="Import from old app" />
