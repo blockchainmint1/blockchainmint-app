@@ -62,7 +62,7 @@ export function setAdminBaseUrl(url: string) {
 
 /** Reactive access to the current backend selection. */
 export function useBackend() {
-  const [backend, setBackendState] = useState<BackendId>("legacy");
+  const [backend, setBackendState] = useState<BackendId>("admin");
   const [adminUrl, setAdminUrlState] = useState<string>(DEFAULT_ADMIN_URL);
 
   useEffect(() => {
