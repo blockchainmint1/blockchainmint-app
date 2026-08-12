@@ -16,17 +16,17 @@ import { useCallback, useEffect, useState } from "react";
 export type BackendId = "legacy" | "admin";
 
 export const BACKENDS: Record<BackendId, { id: BackendId; label: string; description: string; baseUrl: string | null }> = {
-  legacy: {
-    id: "legacy",
-    label: "Legacy (current)",
-    description: "Blockchain Mint registry + direct chain indexers, via this app's own server.",
-    baseUrl: null,
-  },
   admin: {
     id: "admin",
-    label: "New Admin API",
+    label: "Admin API (default)",
     description: "Cold Storage Coins Admin backend — app-v1 endpoints.",
     baseUrl: "https://admin.coldstoragecoins.com",
+  },
+  legacy: {
+    id: "legacy",
+    label: "Legacy (retired)",
+    description: "Old Blockchain Mint registry path — kept for fallback testing only.",
+    baseUrl: null,
   },
 };
 
@@ -37,9 +37,9 @@ const EVENT = "csc:backend-changed";
 export const DEFAULT_ADMIN_URL = BACKENDS.admin.baseUrl!;
 
 export function getBackend(): BackendId {
-  if (typeof window === "undefined") return "legacy";
+  if (typeof window === "undefined") return "admin";
   const v = localStorage.getItem(KEY);
-  return v === "admin" ? "admin" : "legacy";
+  return v === "legacy" ? "legacy" : "admin";
 }
 
 export function getAdminBaseUrl(): string {
