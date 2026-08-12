@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { decodePayload, encodePayload, isAllowedOrigin, type HandoffCoin } from "@/lib/handoff";
+import { encodePayload, isAllowedOrigin, type HandoffCoin } from "@/lib/handoff";
 
 export const Route = createFileRoute("/handoff")({
   ssr: false,
@@ -75,5 +75,3 @@ function HandoffPage() {
     </div>
   );
 }
-
-export { decodePayload };
