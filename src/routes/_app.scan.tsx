@@ -44,10 +44,14 @@ function ScanPage() {
 
   const verifyFn = useVerifyMintRecord();
 
+  const detected = detectChain(address.trim());
+  const effectiveChain = detected?.chain ?? chain;
+  const effectiveAddress = detected?.address ?? address.trim();
+
   const verify = useMutation({
-    mutationFn: () => verifyFn({ data: { chain, address: address.trim() } }),
+    mutationFn: () => verifyFn({ data: { chain: effectiveChain, address: effectiveAddress } }),
     onSuccess: () => {
-      navigate({ to: "/verify/$chain/$address", params: { chain, address: address.trim() } });
+      navigate({ to: "/verify/$chain/$address", params: { chain: effectiveChain, address: effectiveAddress } });
     },
     onError: e => toast.error((e as Error).message),
   });
