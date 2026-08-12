@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useVerifyMintRecord, useLookupAssetId } from "@/lib/api/backendClient";
 import { useBackend } from "@/lib/backend";
-import { CHAIN_OPTIONS, CHAINS, cscId, type ChainId } from "@/lib/chains";
+import { CHAINS, cscId, type ChainId } from "@/lib/chains";
 import { ShieldCheck, Coins, Keyboard, QrCode, CheckCircle2, XCircle, ScanLine, Hash, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { QrScanner } from "@/components/QrScanner";
