@@ -51,7 +51,7 @@ function SettingsPage() {
             onClick={() => navigate({ to: "/auth" })}
             className="mt-3 w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
-            Back up my coins
+            Save my coin list
           </button>
         )}
       </section>
