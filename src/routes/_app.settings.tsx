@@ -62,6 +62,7 @@ function SettingsPage() {
 
       <ul className="space-y-2">
         <SettingLink to="/import" icon={<DownloadCloud className="size-4" />} title="Import from old app" />
+        <SettingLink to="/recover" icon={<ArrowLeftRight className="size-4" />} title="Recover list from an old web address" />
         <SettingLink to="/about" icon={<BookOpen className="size-4" />} title="About" />
         <SettingLink to="/manifesto" icon={<FileText className="size-4" />} title="Manifesto" />
         <SettingLink to="/terms" icon={<FileText className="size-4" />} title="Terms" />
