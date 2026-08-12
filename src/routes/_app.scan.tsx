@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { verifyMintRecord, lookupAssetId } from "@/lib/chains.functions";
+import { useVerifyMintRecord, useLookupAssetId } from "@/lib/api/backendClient";
+import { useBackend } from "@/lib/backend";
 import { CHAIN_OPTIONS, CHAINS, cscId, type ChainId } from "@/lib/chains";
 import { ShieldCheck, Coins, Keyboard, QrCode, CheckCircle2, XCircle, ScanLine, Hash, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
@@ -42,7 +42,7 @@ function ScanPage() {
   const [assetIdMode, setAssetIdMode] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
-  const verifyFn = useServerFn(verifyMintRecord);
+  const verifyFn = useVerifyMintRecord();
 
   const verify = useMutation({
     mutationFn: () => verifyFn({ data: { chain, address: address.trim() } }),
@@ -410,9 +410,10 @@ function ScanPage() {
  * an "Authentic" badge the moment it comes back.
  */
 function AuthenticityBadge({ chain, address }: { chain: ChainId; address: string }) {
-  const verifyFn = useServerFn(verifyMintRecord);
+  const verifyFn = useVerifyMintRecord();
+  const { backend } = useBackend();
   const { data, isLoading } = useQuery({
-    queryKey: ["mint-verify", chain, address],
+    queryKey: ["mint-verify", backend, chain, address],
     queryFn: () => verifyFn({ data: { chain, address } }),
     staleTime: 60_000,
     retry: false,
@@ -479,7 +480,7 @@ function AssetIdLookup({
   onResolved: (chain: ChainId, address: string) => void;
 }) {
   const [value, setValue] = useState("");
-  const lookupFn = useServerFn(lookupAssetId);
+  const lookupFn = useLookupAssetId();
 
   const lookup = useMutation({
     mutationFn: () => lookupFn({ data: { assetId: value } }),
