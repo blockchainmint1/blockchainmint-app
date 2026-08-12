@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getTxHistory, lookupAddress } from "@/lib/chains.functions";
+import { useLookupAddress, useTxHistory } from "@/lib/api/backendClient";
+import { useBackend } from "@/lib/backend";
 import { TokenList } from "@/components/TokenList";
 import { CoinLogo } from "@/components/CoinLogo";
 import { CoinAlerts } from "@/components/CoinAlerts";
@@ -30,8 +31,9 @@ function CoinPage() {
     setLoaded(true);
   }, [id]);
 
-  const summaryFn = useServerFn(lookupAddress);
-  const txFn = useServerFn(getTxHistory);
+  const summaryFn = useLookupAddress();
+  const { backend } = useBackend();
+  const txFn = useTxHistory();
 
   const cached = coin ? getCachedHistory(coin.chain, coin.address) : undefined;
 

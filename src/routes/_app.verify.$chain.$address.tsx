@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { lookupAddress, verifyMintRecord } from "@/lib/chains.functions";
+import { useLookupAddress, useVerifyMintRecord } from "@/lib/api/backendClient";
+import { useBackend } from "@/lib/backend";
 import { CoinMedallion } from "@/components/CoinMedallion";
 import { CHAINS, fmtAmount, fmtUsd, type ChainId } from "@/lib/chains";
 import { ArrowLeft, ShieldCheck, ShieldAlert } from "lucide-react";
@@ -13,16 +14,17 @@ export const Route = createFileRoute("/_app/verify/$chain/$address")({
 
 function VerifyPage() {
   const { chain, address } = useParams({ from: "/_app/verify/$chain/$address" });
-  const verifyFn = useServerFn(verifyMintRecord);
-  const summaryFn = useServerFn(lookupAddress);
+  const verifyFn = useVerifyMintRecord();
+  const { backend } = useBackend();
+  const summaryFn = useLookupAddress();
   const c = chain as ChainId;
 
   const { data: verify, isLoading: vL } = useQuery({
-    queryKey: ["verify", chain, address],
+    queryKey: ["verify", backend, chain, address],
     queryFn: () => verifyFn({ data: { chain: c, address } }),
   });
   const { data: summary } = useQuery({
-    queryKey: ["verify-summary", chain, address],
+    queryKey: ["verify-summary", backend, chain, address],
     queryFn: () => summaryFn({ data: { chain: c, address } }),
   });
 

@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueries } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
-import { lookupAddress } from "@/lib/chains.functions";
+import { useLookupAddress } from "@/lib/api/backendClient";
+import { useBackend } from "@/lib/backend";
 import { CoinLogo } from "@/components/CoinLogo";
 import { CHAINS, cscId, fmtAmount, fmtUsd } from "@/lib/chains";
 import { ScanLine, Plus, RefreshCw, MoreVertical, Pencil, ArrowDownToLine, KeyRound, Trash2 } from "lucide-react";
@@ -43,13 +44,14 @@ const PULL_THRESHOLD = 70;
 function HomePage() {
   const { coins, ready } = useLocalPortfolio();
   const navigate = useNavigate();
-  const lookup = useServerFn(lookupAddress);
+  const lookup = useLookupAddress();
+  const { backend } = useBackend();
 
   const summaries = useQueries({
     queries: coins.map(c => {
       const cached = getCachedHistory(c.chain, c.address);
       return {
-        queryKey: ["summary", c.chain, c.address],
+        queryKey: ["summary", backend, c.chain, c.address],
         queryFn: async () => {
           const summary = await lookup({ data: { chain: c.chain, address: c.address } });
           cacheCoinHistory(c.chain, c.address, { summary });
