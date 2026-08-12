@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Footer } from "@/components/Footer";
-import { LogOut, FileText, Shield, BookOpen, ExternalLink, CloudUpload, UserCircle2, DownloadCloud } from "lucide-react";
+import { LogOut, FileText, Shield, BookOpen, ExternalLink, CloudUpload, UserCircle2, DownloadCloud, ArrowLeftRight } from "lucide-react";
 import { useLocalPortfolio } from "@/lib/localPortfolio";
 import { BackendSwitcher } from "@/components/BackendSwitcher";
 import { CloudBackupCard } from "@/components/CloudBackupCard";
@@ -62,6 +62,7 @@ function SettingsPage() {
 
       <ul className="space-y-2">
         <SettingLink to="/import" icon={<DownloadCloud className="size-4" />} title="Import from old app" />
+        <SettingLink to="/recover" icon={<ArrowLeftRight className="size-4" />} title="Recover list from an old web address" />
         <SettingLink to="/about" icon={<BookOpen className="size-4" />} title="About" />
         <SettingLink to="/manifesto" icon={<FileText className="size-4" />} title="Manifesto" />
         <SettingLink to="/terms" icon={<FileText className="size-4" />} title="Terms" />
