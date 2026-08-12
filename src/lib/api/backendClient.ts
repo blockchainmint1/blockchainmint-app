@@ -26,35 +26,14 @@ import {
   type TxRecord,
 } from "@/lib/chains.functions";
 import { CHAINS, type ChainId } from "@/lib/chains";
-import { useBackend, getAdminBaseUrl } from "@/lib/backend";
+import { useBackend } from "@/lib/backend";
 
-const APP_VERSION = "5.0.3";
+import { apiPost, adminHealth } from "@/lib/api/adminApi";
 
-async function adminPost<T>(base: string, path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${base}/api/public/app/v1${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-app-version": APP_VERSION },
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json().catch(() => null)) as any;
-  if (!json) throw new Error(`Backend error ${res.status}`);
-  return json as T;
-}
+export { adminHealth };
 
-export async function adminHealth(base = getAdminBaseUrl()) {
-  const started = Date.now();
-  const res = await fetch(`${base}/api/public/app/v1/health`, {
-    headers: { "x-app-version": APP_VERSION },
-  });
-  const json = (await res.json().catch(() => null)) as any;
-  return {
-    ok: res.ok && !!json?.ok,
-    status: res.status,
-    ms: Date.now() - started,
-    apiVersion: json?.apiVersion ?? null,
-    service: json?.service ?? null,
-  };
-}
+const adminPost = <T,>(base: string, path: string, body: unknown) =>
+  apiPost<T>(path, body, { base });
 
 // ---------------------------------------------------------------- balances
 
